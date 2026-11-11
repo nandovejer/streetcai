@@ -209,6 +209,7 @@ export class Renderer {
     const c = this.ctx, img = this.assets.portrait[id];
     const s = Math.min(img.width, img.height), ox = (img.width - s) / 2;
     c.save(); c.imageSmoothingEnabled = true;
+    c.fillStyle = '#141a33'; c.fillRect(x, y, size, size);
     if (flip) { c.translate(x + size, y); c.scale(-1, 1); c.drawImage(img, ox, 0, s, s, 0, 0, size, size); }
     else c.drawImage(img, ox, 0, s, s, x, y, size, size);
     c.imageSmoothingEnabled = false; c.restore();

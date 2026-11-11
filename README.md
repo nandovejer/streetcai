@@ -62,7 +62,7 @@ Añadir un luchador: lámina nueva + entrada en `tools/extract_sprites.py` + ent
 ## Decisiones respecto al plan técnico
 
 - **Canvas 2D propio en lugar de Phaser**: menos peso en móvil, simulación determinista a 60 Hz testeable en Node y cero dependencias de runtime. La arquitectura (escenas, luchador, combate, sistemas, UI) sigue la del plan.
-- **Sprites recortados de las láminas**: el plan pedía no usar las láminas como spritesheet, pero son el único arte disponible. Se recortan frame a frame con transparencia real, ancla en los pies y escala normalizada.
+- **Sprites recortados de las láminas**: el plan pedía no usar las láminas como spritesheet, pero son el único arte disponible. Se recortan frame a frame con transparencia real, ancla en los pies y escala normalizada. Chapa sale entero de la lámina con croma verde (`fighter-chapa-chroma.png`). De la lámina croma de Ares solo se usan idle, walk y el retrato: en el resto de filas el personaje lleva otra ropa, así que esas siguen saliendo de la lámina original.
 
 ## Recursos gráficos pendientes
 
