@@ -178,6 +178,7 @@ async function boot() {
   else setScreen('title');
   if (params.has('debug')) r.debug = true;
 
+  if (import.meta.env.DEV) (window as unknown as Record<string, unknown>).__sc = { get match() { return match; }, get screen() { return screen; }, get paused() { return paused; } };
   let last = performance.now(), acc = 0;
   const STEP = 1000 / 60;
   const loop = (now: number) => {
