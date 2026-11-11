@@ -19,6 +19,7 @@ export class Renderer {
   private shownHp = [1, 1];
   private camX = (STAGE_W - VW) / 2;
   time = 0;
+  debug = false;
 
   constructor(public canvas: HTMLCanvasElement, public assets: Assets) {
     canvas.width = VW * SCALE; canvas.height = VH * SCALE;
@@ -111,7 +112,16 @@ export class Renderer {
         c.globalAlpha = 1;
       }
     }
-    this.drawSprite(f.def.id, f.frame(), sx + jitter, sy, f.facing, SPRITE_SCALE, f.flash / 7);
+    const hop = f.state === 'victory' && f.t < 150 ? Math.abs(Math.sin(f.t * 0.13)) * 9 : 0;
+    this.drawSprite(f.def.id, f.frame(), sx + jitter, sy - hop, f.facing, SPRITE_SCALE, f.flash / 7);
+    if (this.debug) {
+      const box = (r: { l: number; r: number; b: number; t: number } | null, col: string) => {
+        if (!r) return;
+        c.strokeStyle = col; c.lineWidth = 1; c.strokeRect(r.l - this.camX, GROUND_Y - r.t, r.r - r.l, r.t - r.b);
+        c.globalAlpha = 0.25; c.fillStyle = col; c.fillRect(r.l - this.camX, GROUND_Y - r.t, r.r - r.l, r.t - r.b); c.globalAlpha = 1;
+      };
+      box(f.hurtbox(), '#30ff60'); box(f.hitbox(), '#ff2040');
+    }
     if (f.state === 'stunned') {
       for (let i = 0; i < 3; i++) {
         const a = this.time * 0.15 + i * 2.1;
@@ -240,7 +250,7 @@ export class Renderer {
       }
       // combo
       if (m.combo[i] >= 2) {
-        const cx = i === 0 ? 70 : VW - 70;
+        const cx = i === 0 ? 96 : VW - 96;
         this.bigText(`${m.combo[i]} HITS`, cx, 110, 14);
       }
     }

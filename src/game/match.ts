@@ -9,6 +9,7 @@ interface HitInfo { damage: number; hitstun: number; blockstun: number; push: nu
 
 const WALL = 30;
 const MAX_SEP = 560;
+const BODY = 54;
 
 export class Match {
   f: [Fighter, Fighter];
@@ -55,7 +56,7 @@ export class Match {
     for (let i = 0; i < 2; i++) if (this.comboT[i] > 0 && --this.comboT[i] === 0) this.combo[i] = 0;
 
     if (this.phase === 'intro') {
-      this.message = this.phaseT < 75 ? `ROUND ${this.round}` : 'A PELEAR!';
+      this.message = this.phaseT < 75 ? `ROUND ${this.round}` : '¡A PELEAR!';
       if (this.phaseT >= 115) { this.phase = 'fight'; this.phaseT = 0; this.message = ''; }
       const idle = { left: false, right: false, up: false, down: false, lp: false, hp: false, lk: false, hk: false, block: false, special: false };
       this.f[0].update(idle, this.f[1], this.events, false, false);
@@ -85,12 +86,12 @@ export class Match {
       if (dead[0] || dead[1]) this.endRound(dead[0] && dead[1] ? -1 : dead[0] ? 1 : 0, 'K.O.');
       else if (this.timer === 0) {
         const r0 = this.f[0].hp / this.f[0].def.maxHp, r1 = this.f[1].hp / this.f[1].def.maxHp;
-        this.endRound(r0 === r1 ? -1 : r0 > r1 ? 0 : 1, 'TIEMPO!');
+        this.endRound(r0 === r1 ? -1 : r0 > r1 ? 0 : 1, '¡TIEMPO!');
       }
     } else if (this.phase === 'ko') {
       const w = this.roundWinner;
       if (this.phaseT >= 80 && w >= 0 && this.f[w].actionable) this.f[w].setState('victory');
-      if (this.phaseT === 80) this.message = w < 0 ? 'EMPATE' : this.perfect ? 'PERFECTO!' : `${this.f[w].def.name} GANA`;
+      if (this.phaseT === 80) this.message = w < 0 ? 'EMPATE' : this.perfect ? '¡PERFECTO!' : `${this.f[w].def.name} GANA`;
       if (this.phaseT >= 230) {
         if (w >= 0 && this.f[w].wins >= ROUNDS_TO_WIN) { this.phase = 'matchEnd'; this.matchWinner = w; this.message = ''; }
         else { if (w >= 0) this.round++; this.startRound(); }
@@ -120,7 +121,7 @@ export class Match {
     const [a, b] = this.f;
     // Empuje entre cuerpos (solo si ambos están a una altura parecida)
     if (Math.abs(a.y - b.y) < 70 && !a.isDown && !b.isDown) {
-      const min = 38, dx = b.x - a.x;
+      const min = BODY, dx = b.x - a.x;
       if (Math.abs(dx) < min) {
         const push = (min - Math.abs(dx)) / 2, dir = dx === 0 ? (a.facing === 1 ? 1 : -1) : Math.sign(dx);
         a.x -= dir * push; b.x += dir * push;
@@ -132,9 +133,9 @@ export class Match {
       a.x = mid + (s * MAX_SEP) / 2; b.x = mid - (s * MAX_SEP) / 2;
     }
     // Segunda pasada contra la pared para que nadie se solape en la esquina
-    if (Math.abs(a.y - b.y) < 70 && !a.isDown && !b.isDown && Math.abs(b.x - a.x) < 38) {
+    if (Math.abs(a.y - b.y) < 70 && !a.isDown && !b.isDown && Math.abs(b.x - a.x) < BODY) {
       const left = a.x <= b.x ? a : b, right = left === a ? b : a;
-      if (left.x <= WALL + 0.5) right.x = left.x + 38; else if (right.x >= STAGE_W - WALL - 0.5) left.x = right.x - 38;
+      if (left.x <= WALL + 0.5) right.x = left.x + BODY; else if (right.x >= STAGE_W - WALL - 0.5) left.x = right.x - BODY;
     }
   }
 

@@ -69,6 +69,16 @@ export class AudioManager {
     }
   }
 
+  /** Locutor con la síntesis de voz del navegador (si existe). */
+  say(text: string) {
+    if (this.muted || !this.ctx || !('speechSynthesis' in window)) return;
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'es-ES'; u.rate = 1.15; u.pitch = 0.5; u.volume = 0.9;
+      window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
+    } catch { /* sin voz */ }
+  }
+
   // Música: cadencia andaluza (Lam - Sol - Fa - Mi) a 16 pasos por compás.
   private static ROOTS = [-12, -14, -16, -17];
   private static THIRD = [3, 4, 4, 4];

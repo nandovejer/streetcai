@@ -52,3 +52,14 @@ body.touch[data-screen="fight"] #touch {
   #btns { gap: 2.5vw; }
   .tb { --b: min(15.5vw, 70px); opacity: .95; }
 }
+
+@media (orientation: landscape) {
+  body[data-screen="fight"] #sys { top: 17%; flex-direction: column; opacity: .55; }
+  body[data-screen="fight"] #sys button { width: 30px; height: 30px; }
+}
+@media (orientation: portrait) {
+  body.touch[data-screen="fight"]::after {
+    content: "GIRA EL MOVIL PARA VERLO EN GRANDE"; position: fixed; left: 0; right: 0; bottom: max(14px, env(safe-area-inset-bottom));
+    text-align: center; font-size: 8px; color: #6d7096;
+  }
+}

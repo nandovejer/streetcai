@@ -18,7 +18,7 @@ export function drawTitle(r: Renderer, touch: boolean) {
   const bob = Math.sin(t * 0.05) * 3;
   r.bigText('STREET', VW / 2, 70 + bob, 46);
   r.bigText('CAI', VW / 2, 124 + bob, 58);
-  r.text('PLAZA DE LAS FLORES - CADIZ', VW / 2, 166, 8, '#fff');
+  r.text('PLAZA DE LAS FLORES · CADIZ', VW / 2, 166, 8, '#fff');
   r.text('VS', VW / 2, 250, 20, '#ff3b1f');
   if (Math.floor(t / 30) % 2 === 0) r.text(touch ? 'TOCA PARA EMPEZAR' : 'PULSA ENTER PARA EMPEZAR', VW / 2, 300, 10, '#ffd800');
   r.text('CHAPA', 190, 346, 8, '#ffb400');
@@ -31,7 +31,7 @@ export function selectButtons(s: Settings): Button[] {
   DIFFICULTY_NAMES.forEach((n, i) => b.push({ x: 176 + i * 100, y: 218, w: 92, h: 22, label: n, action: 'diff:' + i, on: s.difficulty === i && !s.twoPlayers }));
   b.push({ x: 176, y: 248, w: 142, h: 22, label: '1P VS CPU', action: 'mode:cpu', on: !s.twoPlayers });
   b.push({ x: 326, y: 248, w: 142, h: 22, label: '2 JUGADORES', action: 'mode:2p', on: s.twoPlayers });
-  b.push({ x: 230, y: 282, w: 180, h: 32, label: 'A LUCHAR!', action: 'fight' });
+  b.push({ x: 230, y: 282, w: 180, h: 32, label: '¡A LUCHAR!', action: 'fight' });
   return b;
 }
 
@@ -79,8 +79,8 @@ export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
       r.text('J1: WASD + F/G (FLOJOS) T/Y (FUERTES) R BLOQUEO H ESPECIAL', VW / 2, 330, 6, '#ffd800');
       r.text('J2: FLECHAS + J/K (FLOJOS) U/I (FUERTES) O BLOQUEO L ESPECIAL', VW / 2, 345, 6, '#3cb8ff');
     } else {
-      r.text('WASD/FLECHAS MOVER - F/G PUNO/PATADA - T/Y FUERTES - R BLOQUEO - H ESPECIAL', VW / 2, 330, 6, '#ffd800');
-      r.text('ATRAS = BLOQUEAR - ABAJO, ADELANTE + PUNO = ESPECIAL - ESC PAUSA', VW / 2, 345, 6, '#fff');
+      r.text('WASD/FLECHAS MOVER - F/G GOLPES FLOJOS - T/Y FUERTES - R BLOQUEO - H ESPECIAL', VW / 2, 330, 6, '#ffd800');
+      r.text('ATRAS = BLOQUEAR - ABAJO, ADELANTE + F = ESPECIAL - ESC PAUSA', VW / 2, 345, 6, '#fff');
     }
   } else r.text('ATRAS = BLOQUEAR - SP = ESPECIAL - ENCADENA FLOJO > FUERTE', VW / 2, 336, 6, '#ffd800');
 }

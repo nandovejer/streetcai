@@ -41,7 +41,7 @@ async function boot() {
   const setScreen = (s: Screen) => {
     screen = s;
     document.body.dataset.screen = s;
-    if (s === 'fight') audio.startMusic(); else audio.stopMusic();
+    audio.startMusic();
   };
 
   const startFight = () => {
@@ -84,6 +84,7 @@ async function boot() {
     audio.init();
     const k = e.code;
     if (k === 'KeyM' && screen !== 'fight') { audio.toggleMute(); return; }
+    if (k === 'F2') { r.debug = !r.debug; e.preventDefault(); return; }
     if (screen === 'title') { if (k === 'Enter' || k === 'Space') act('title'); }
     else if (screen === 'select') {
       if (k === 'ArrowLeft' || k === 'KeyA') act('char:chapa');
@@ -114,7 +115,6 @@ async function boot() {
       if (document.fullscreenElement) await document.exitFullscreen();
       else {
         await document.documentElement.requestFullscreen();
-        const o = screen as unknown; void o;
         const so = window.screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
         if (so && so.lock) await so.lock('landscape').catch(() => undefined);
       }
@@ -135,8 +135,14 @@ async function boot() {
     }
     const p1 = demoAi ? demoAi.next(m.f[0], m.f[1], m.projectiles) : input.get(0, settings.twoPlayers);
     const p2 = ai ? ai.next(m.f[1], m.f[0], m.projectiles) : input.get(1, true);
+    const wasIntro = m.phase === 'intro';
     m.step([p1, p2]);
+    if (wasIntro && m.phase === 'fight') audio.play('start');
+    if (m.phase === 'intro' && m.phaseT === 5) audio.say(`Ronda ${['uno', 'dos', 'tres', 'cuatro', 'cinco'][m.round - 1] || m.round}`);
+    if (m.phase === 'intro' && m.phaseT === 78) audio.say('¡A pelear!');
+    if (m.phase === 'ko' && m.phaseT === 82 && m.roundWinner >= 0) audio.say(m.perfect ? '¡Perfecto!' : `${m.f[m.roundWinner].def.name.toLowerCase()} gana`);
     for (const e of m.events) {
+      if (e.type === 'ko') audio.say(m.message === 'K.O.' ? 'Kei ou' : 'Tiempo');
       if (e.type === 'hit') audio.play(e.heavy ? 'heavy' : e.kick ? 'kick' : 'punch');
       else if (SFX[e.type]) audio.play(SFX[e.type]);
     }
@@ -153,7 +159,7 @@ async function boot() {
       if (paused) drawPause(r);
     } else if (screen === 'result' && match) {
       const w = match.matchWinner, win = match.f[w].def.id, lose = match.f[1 - w].def.id;
-      const head = settings.twoPlayers ? `GANA J${w + 1}` : w === 0 ? 'HAS GANADO!' : 'HAS PERDIDO';
+      const head = settings.twoPlayers ? `GANA J${w + 1}` : w === 0 ? '¡HAS GANADO!' : 'HAS PERDIDO';
       drawResult(r, win, lose, head, `${match.f[0].wins} - ${match.f[1].wins}`);
     }
   };
@@ -166,6 +172,7 @@ async function boot() {
     for (let i = 0; i < ff; i++) { stepFight(); if (i % 2 === 0) draw(); }
   } else if (params.has('screen')) setScreen(params.get('screen') as Screen);
   else setScreen('title');
+  if (params.has('debug')) r.debug = true;
 
   let last = performance.now(), acc = 0;
   const STEP = 1000 / 60;
