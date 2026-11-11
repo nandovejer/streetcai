@@ -1,0 +1,54 @@
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; height: 100%; background: #05060f; overflow: hidden; overscroll-behavior: none;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  font-family: "Press Start 2P", monospace; color: #fff;
+}
+body { display: flex; align-items: center; justify-content: center; height: 100dvh; }
+#wrap { position: relative; width: min(100vw, calc(100dvh * 16 / 9)); aspect-ratio: 16 / 9; }
+#game { width: 100%; height: 100%; display: block; image-rendering: pixelated; background: #000; }
+#loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #ffd800; }
+
+#sys { position: fixed; top: max(6px, env(safe-area-inset-top)); right: max(6px, env(safe-area-inset-right)); display: flex; gap: 6px; z-index: 5; opacity: .75; }
+#sys button {
+  width: 34px; height: 34px; border: 2px solid #000; border-radius: 6px; background: #1b1b2e; color: #ffd800;
+  font: 10px "Press Start 2P", monospace; padding: 0; cursor: pointer;
+}
+#sys button.off { color: #666; text-decoration: line-through; }
+#btn-pause { display: none; }
+body[data-screen="fight"] #btn-pause { display: block; }
+
+/* Controles táctiles */
+#touch { display: none; }
+body.touch[data-screen="fight"] #touch {
+  display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; pointer-events: none;
+  justify-content: space-between; align-items: flex-end;
+  padding: 0 max(14px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+}
+#stick, #btns { pointer-events: auto; touch-action: none; }
+#stick {
+  --s: min(34vh, 150px); width: var(--s); height: var(--s); border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.10) 0 40%, rgba(255,255,255,.22) 41% 100%);
+  border: 2px solid rgba(255,255,255,.45); display: flex; align-items: center; justify-content: center;
+}
+#knob { width: 44%; height: 44%; border-radius: 50%; background: rgba(255,216,0,.75); border: 2px solid #000; pointer-events: none; }
+#btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: min(2.2vh, 10px); }
+.tb {
+  --b: min(17vh, 64px); width: var(--b); height: var(--b); border-radius: 50%; border: 2px solid #000;
+  font: 10px "Press Start 2P", monospace; color: #fff; text-shadow: 1px 1px 0 #000; padding: 0; touch-action: none;
+  box-shadow: 0 3px 0 rgba(0,0,0,.6); opacity: .72;
+}
+.tb.light { background: #2f7de0; } .tb.heavy { background: #d93a2b; } .tb.sp { background: #e09a00; } .tb.blk { background: #3a9d5d; }
+.tb.down { transform: translateY(3px) scale(.94); box-shadow: none; opacity: 1; filter: brightness(1.4); }
+
+/* Vertical: juego arriba, mandos debajo */
+@media (orientation: portrait) {
+  body { align-items: flex-start; }
+  #wrap { width: 100vw; margin-top: max(44px, env(safe-area-inset-top)); }
+  body.touch[data-screen="fight"] #touch {
+    top: calc(100vw * 9 / 16 + 60px); align-items: center; padding-left: 5vw; padding-right: 5vw;
+  }
+  #stick { --s: min(40vw, 170px); }
+  #btns { gap: 2.5vw; }
+  .tb { --b: min(15.5vw, 70px); opacity: .95; }
+}
