@@ -143,6 +143,7 @@ async function boot() {
     if (m.phase === 'ko' && m.phaseT === 82 && m.roundWinner >= 0) audio.say(m.perfect ? '¡Perfecto!' : `${m.f[m.roundWinner].def.name.toLowerCase()} gana`);
     for (const e of m.events) {
       if (e.type === 'ko') audio.say(m.message === 'K.O.' ? 'Kei ou' : 'Tiempo');
+      if (e.type === 'super' && e.who !== undefined) { audio.play('guardbreak'); audio.say(m.f[e.who].def.specialName.toLowerCase()); }
       if (e.type === 'hit') audio.play(e.heavy ? 'heavy' : e.kick ? 'kick' : 'punch');
       else if (SFX[e.type]) audio.play(SFX[e.type]);
     }
@@ -169,7 +170,10 @@ async function boot() {
     settings.difficulty = 2; if (params.get('demo') === 'ares') settings.char = 'ares';
     startFight(); demoAi = new AI(2);
     const ff = Number(params.get('ff') || 0);
-    for (let i = 0; i < ff; i++) { stepFight(); if (i % 2 === 0) draw(); }
+    for (let i = 0; i < ff; i++) {
+      stepFight(); if (i % 2 === 0) draw();
+      if (params.has('untilSuper') && match!.superFreeze > 0 && match!.superFreeze < 30) { paused = true; break; }
+    }
   } else if (params.has('screen')) setScreen(params.get('screen') as Screen);
   else setScreen('title');
   if (params.has('debug')) r.debug = true;

@@ -80,9 +80,9 @@ export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
       r.text('J2: FLECHAS + J/K (FLOJOS) U/I (FUERTES) O BLOQUEO L ESPECIAL', VW / 2, 345, 6, '#3cb8ff');
     } else {
       r.text('WASD/FLECHAS MOVER - F/G GOLPES FLOJOS - T/Y FUERTES - R BLOQUEO - H ESPECIAL', VW / 2, 330, 6, '#ffd800');
-      r.text('ATRAS = BLOQUEAR - ABAJO, ADELANTE + F = ESPECIAL - ESC PAUSA', VW / 2, 345, 6, '#fff');
+      r.text('ATRAS = BLOQUEAR - DOBLE TOQUE = DASH - BARRA LLENA + ESPECIAL = SUPER - ESC PAUSA', VW / 2, 345, 6, '#fff');
     }
-  } else r.text('ATRAS = BLOQUEAR - SP = ESPECIAL - ENCADENA FLOJO > FUERTE', VW / 2, 336, 6, '#ffd800');
+  } else r.text('ATRAS = BLOQUEAR - SP = ESPECIAL (SUPER CON BARRA LLENA) - DOBLE TOQUE = DASH', VW / 2, 336, 6, '#ffd800');
 }
 
 export function resultButtons(): Button[] {

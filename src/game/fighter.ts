@@ -11,10 +11,10 @@ export const emptyInput = (): Input => ({
 
 export type State =
   | 'idle' | 'walk' | 'crouch' | 'prejump' | 'jump' | 'land' | 'attack' | 'airattack'
-  | 'blockstun' | 'hit' | 'stunned' | 'knockdown' | 'down' | 'getup' | 'ko' | 'victory';
+  | 'dash' | 'blockstun' | 'hit' | 'stunned' | 'knockdown' | 'down' | 'getup' | 'ko' | 'victory';
 
 export interface GameEvent {
-  type: 'hit' | 'block' | 'dust' | 'jump' | 'land' | 'whoosh' | 'ko' | 'special' | 'projectile' | 'guardbreak' | 'fall' | 'clash';
+  type: 'hit' | 'block' | 'dust' | 'jump' | 'land' | 'whoosh' | 'ko' | 'special' | 'projectile' | 'guardbreak' | 'fall' | 'clash' | 'super';
   x: number; y: number; heavy?: boolean; kick?: boolean; who?: number;
 }
 
@@ -25,6 +25,10 @@ export class Fighter {
   x = 0; y = 0; vx = 0; vy = 0; kb = 0;
   facing: 1 | -1 = 1;
   hp = 0; guard = 100; wins = 0;
+  /** Barra de súper (0-100). Se conserva entre rondas. */
+  meter = 0;
+  isSuper = false;
+  private tapF = -99; private tapB = -99; private dashDir = 0;
   state: State = 'idle';
   t = 0;
   move: MoveData | null = null;
@@ -80,6 +84,8 @@ export class Fighter {
 
   private startMove(id: MoveId, canSpecial: boolean, ev: GameEvent[]) {
     if (id === 'special' && !canSpecial) id = 'hp';
+    this.isSuper = id === 'special' && this.meter >= 100;
+    if (this.isSuper) { this.meter = 0; ev.push({ type: 'super', x: this.x, y: 100, who: this.idx }); }
     this.state = 'attack'; this.t = 0; this.move = this.def.moves[id];
     this.moveDone = false; this.moveHit = false; this.vx = 0; this.buf = null; this.guarding = false;
     ev.push({ type: id === 'special' ? 'special' : 'whoosh', x: this.x, y: 90, heavy: this.move.heavy, who: this.idx });
@@ -116,7 +122,16 @@ export class Fighter {
       case 'idle': case 'walk': case 'crouch': {
         this.comboHits = 0;
         this.guarding = inp.block || (back && threat);
+        // Dash: doble toque adelante o atrás
+        const pf = this.facing === 1 ? prev.right : prev.left, pb = this.facing === 1 ? prev.left : prev.right;
+        let dash = 0;
+        if (fwd && !pf) { if (this.clock - this.tapF < 13) dash = 1; this.tapF = this.clock; }
+        if (back && !pb) { if (this.clock - this.tapB < 13) dash = -1; this.tapB = this.clock; }
         if (this.buf) this.startMove(this.buf, canSpecial, ev);
+        else if (dash && !inp.down && !inp.block) {
+          this.setState('dash'); this.dashDir = dash * this.facing; this.guarding = false; this.tapF = this.tapB = -99;
+          ev.push({ type: 'land', x: this.x, y: 0 });
+        }
         else if (this.guarding) { this.vx = 0; this.setState(inp.down ? 'crouch' : 'idle'); }
         else if (inp.up) { this.setState('prejump'); this.vx = 0; this.jumpDir = inp.right ? 1 : inp.left ? -1 : 0; }
         else if (inp.down) { this.setState('crouch'); this.vx = 0; }
@@ -124,6 +139,13 @@ export class Fighter {
           this.setState('walk');
           this.vx = (inp.right ? 1 : -1) * this.def.walk * (back ? 0.8 : 1);
         } else { this.setState('idle'); this.vx = 0; }
+        break;
+      }
+      case 'dash': {
+        const f = this.dashDir === this.facing;
+        this.vx = this.dashDir * this.def.walk * (f ? 2.7 : 2.4) * (this.t < 10 ? 1 : 0.35);
+        if (this.buf && f && this.t >= 6) this.startMove(this.buf, canSpecial, ev);
+        else if (this.t >= 14) { this.setState('idle'); this.vx = 0; }
         break;
       }
       case 'prejump':
@@ -148,7 +170,7 @@ export class Fighter {
       case 'attack': {
         const m = this.move!;
         this.vx = this.t < m.startup && m.lunge ? this.facing * m.lunge : 0;
-        if (m.projectile && this.t === m.startup) ev.push({ type: 'projectile', x: this.x + this.facing * 46, y: 96, who: this.idx });
+        if (m.projectile && this.t === m.startup) ev.push({ type: 'projectile', x: this.x + this.facing * 46, y: 96, who: this.idx, heavy: this.isSuper });
         if (this.moveHit && this.buf && this.t >= m.startup && this.def.moves[this.buf].level > m.level && this.buf !== 'jk') {
           if (this.buf !== 'special' || canSpecial) { this.startMove(this.buf, canSpecial, ev); break; }
         }
@@ -204,6 +226,7 @@ export class Fighter {
         const i = Math.floor(this.t / 5) % 8;
         return `walk_${this.vx * this.facing < 0 ? 7 - i : i}`;
       }
+      case 'dash': { const i = Math.floor(this.t / 2) % 8; return `walk_${this.dashDir === this.facing ? i : 7 - i}`; }
       case 'crouch': return this.guarding ? 'jump_1' : 'jump_0';
       case 'prejump': return 'jump_1';
       case 'jump': return this.vy > 3.5 ? 'jump_2' : this.vy > -3.5 ? 'jump_3' : 'jump_4';

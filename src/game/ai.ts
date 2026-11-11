@@ -61,6 +61,8 @@ export class AI {
       hold = 6;
     } else if (lowHp && dist < 120 && r < 0.3) {
       inp[back] = true; hold = 20;
+    } else if (me.meter >= 100 && dist > 80 && r < 0.4) {
+      press('special'); hold = 30;
     } else if (dist > 175) {
       if (r < c.special * 2) { press('special'); hold = 30; }
       else if (r < c.special * 2 + 0.08) { press('up'); inp[fwd] = true; hold = 20; }

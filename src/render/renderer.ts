@@ -190,7 +190,8 @@ export class Renderer {
     const c = this.ctx;
     for (const p of m.projectiles) {
       if (!p.alive) continue;
-      const d = m.f[p.owner].def.proj, x = p.x - this.camX, y = GROUND_Y - p.y, dir = Math.sign(p.vx);
+      const d0 = m.f[p.owner].def.proj, d = p.big ? { ...d0, size: d0.size * 1.9 } : d0;
+      const x = p.x - this.camX, y = GROUND_Y - p.y, dir = Math.sign(p.vx);
       const pulse = 1 + Math.sin(p.t * 0.7) * 0.15;
       for (let i = 4; i >= 1; i--) {
         c.globalAlpha = 0.14 * (5 - i); c.fillStyle = d.glow;
@@ -253,6 +254,13 @@ export class Renderer {
         const cx = i === 0 ? 96 : VW - 96;
         this.bigText(`${m.combo[i]} HITS`, cx, 110, 14);
       }
+      // barra de súper
+      const mx0 = i === 0 ? VW / 2 - 136 : VW / 2 + 16, full = f.meter >= 100, blink = Math.floor(this.time / 6) % 2 === 0;
+      c.fillStyle = '#000'; c.fillRect(mx0 - 2, VH - 16, 124, 10);
+      c.fillStyle = '#20203a'; c.fillRect(mx0, VH - 14, 120, 6);
+      c.fillStyle = full ? (blink ? '#fff' : '#ffb400') : '#2f9bff';
+      const mw = 120 * (f.meter / 100); c.fillRect(i === 0 ? mx0 : mx0 + 120 - mw, VH - 14, mw, 6);
+      this.text(full ? 'SUPER!' : 'SUPER', i === 0 ? mx0 - 6 : mx0 + 126, VH - 10.5, 6, full && blink ? '#ffd800' : '#9aa0c8', i === 0 ? 'right' : 'left');
     }
     // reloj
     c.fillStyle = '#000'; c.fillRect(VW / 2 - 24, y - 8, 48, 32);
@@ -276,7 +284,17 @@ export class Renderer {
     this.camX += (target - this.camX) * 0.15;
     this.begin(m.shake);
     this.ctx.save();
-    this.drawStage(this.camX);
+    const sf = m.superFreeze;
+    this.drawStage(this.camX, sf > 0 ? 0.6 : 0);
+    if (sf > 0) {
+      const w = m.f[m.superWho], c = this.ctx, cx = w.x - this.camX, cy = GROUND_Y - 95;
+      c.strokeStyle = w.def.proj.glow; c.lineWidth = 2;
+      for (let i = 0; i < 18; i++) {
+        const a = i * 0.349 + this.time * 0.05, r0 = 40 + ((this.time * 9 + i * 37) % 120);
+        c.globalAlpha = 0.6; c.beginPath(); c.moveTo(cx + Math.cos(a) * (r0 + 60), cy + Math.sin(a) * (r0 + 60)); c.lineTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); c.stroke();
+      }
+      c.globalAlpha = 1;
+    }
     this.drawPetals();
     // el que ataca se dibuja encima
     const order = m.f[0].attacking && !m.f[1].attacking ? [1, 0] : [0, 1];
@@ -288,6 +306,7 @@ export class Renderer {
     this.ctx.restore();
     this.begin(0);
     this.drawHud(m, labels);
+    if (sf > 0) this.bigText(`¡${m.f[m.superWho].def.specialName}!`, VW / 2, 96, 26);
   }
 
   resetFight() { this.parts = []; this.shownHp = [1, 1]; this.camX = (STAGE_W - VW) / 2; }

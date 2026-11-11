@@ -2,10 +2,10 @@
 import { FighterDef, ROUND_TIME, ROUNDS_TO_WIN, STAGE_W } from './data';
 import { Fighter, GameEvent, Input, Rect, overlap } from './fighter';
 
-export interface Projectile { x: number; y: number; vx: number; owner: number; damage: number; t: number; alive: boolean }
+export interface Projectile { x: number; y: number; vx: number; owner: number; damage: number; t: number; alive: boolean; big: boolean }
 export type Phase = 'intro' | 'fight' | 'ko' | 'matchEnd';
 
-interface HitInfo { damage: number; hitstun: number; blockstun: number; push: number; knockdown?: boolean; heavy?: boolean; kick?: boolean }
+interface HitInfo { damage: number; hitstun: number; blockstun: number; push: number; knockdown?: boolean; heavy?: boolean; kick?: boolean; noMeter?: boolean }
 
 const WALL = 30;
 const MAX_SEP = 560;
@@ -21,6 +21,9 @@ export class Match {
   timer = ROUND_TIME;
   private tick = 0;
   hitstop = 0;
+  /** Congelación dramática al lanzar un súper. */
+  superFreeze = 0;
+  superWho = 0;
   shake = 0;
   message = '';
   roundWinner = -1;
@@ -65,6 +68,7 @@ export class Match {
     }
     if (this.phase === 'matchEnd') return;
 
+    if (this.superFreeze > 0) { this.superFreeze--; return; }
     if (this.hitstop > 0) { this.hitstop--; return; }
     // Cámara lenta tras el KO
     if (this.phase === 'ko' && this.phaseT < 50 && this.phaseT % 2 === 0) return;
@@ -110,10 +114,15 @@ export class Match {
 
   private spawnProjectiles() {
     for (const e of this.events) {
-      if (e.type !== 'projectile' || e.who === undefined || (e as { done?: boolean }).done) continue;
+      if (e.who === undefined || (e as { done?: boolean }).done) continue;
+      if (e.type === 'super') { (e as { done?: boolean }).done = true; this.superFreeze = 42; this.superWho = e.who; continue; }
+      if (e.type !== 'projectile') continue;
       (e as { done?: boolean }).done = true;
-      const o = this.f[e.who];
-      this.projectiles.push({ x: e.x, y: e.y, vx: o.facing * o.def.proj.speed, owner: e.who, damage: o.def.proj.damage, t: 0, alive: true });
+      const o = this.f[e.who], big = !!e.heavy;
+      this.projectiles.push({
+        x: e.x, y: e.y, vx: o.facing * o.def.proj.speed * (big ? 1.25 : 1), owner: e.who,
+        damage: Math.round(o.def.proj.damage * (big ? 2.3 : 1)), t: 0, alive: true, big,
+      });
     }
   }
 
@@ -162,6 +171,7 @@ export class Match {
       def.state = 'blockstun'; def.t = 0; def.stun = def.stunTotal = m.blockstun; def.guarding = true;
       def.kb = dir * m.push * 0.9;
       def.guard -= m.damage * 2.4;
+      att.meter = Math.min(100, att.meter + 1); def.meter = Math.min(100, def.meter + 1.5);
       if (isProj || m.heavy) def.hp = Math.max(1, def.hp - 1);
       if (def.guard <= 0) {
         def.guard = 100; def.state = 'stunned'; def.t = 0; def.stun = def.stunTotal = 80; def.guarding = false;
@@ -174,6 +184,8 @@ export class Match {
       const dmg = Math.max(1, Math.round(m.damage * att.def.power * scale));
       def.comboHits++;
       def.hp = Math.max(0, def.hp - dmg);
+      if (!m.noMeter) att.meter = Math.min(100, att.meter + dmg * 0.75);
+      def.meter = Math.min(100, def.meter + dmg * 0.45);
       def.flash = 7; def.guarding = false; def.move = null;
       if (!isProj) att.moveHit = true;
       this.combo[att.idx] = def.comboHits; this.comboT[att.idx] = 80;
@@ -197,16 +209,17 @@ export class Match {
       if (!p.alive) continue;
       p.x += p.vx; p.t++;
       if (p.x < -30 || p.x > STAGE_W + 30) { p.alive = false; continue; }
-      const r: Rect = { l: p.x - 15, r: p.x + 15, b: p.y - 20, t: p.y + 20 };
+      const hw = p.big ? 26 : 15, hh = p.big ? 34 : 20;
+      const r: Rect = { l: p.x - hw, r: p.x + hw, b: p.y - hh, t: p.y + hh };
       const def = this.f[1 - p.owner], hu = def.hurtbox();
       if (hu && overlap(r, hu)) {
         p.alive = false;
-        this.applyHit(this.f[p.owner], def, { damage: p.damage, hitstun: 19, blockstun: 12, push: 5, heavy: true }, p.x, p.y, true);
+        this.applyHit(this.f[p.owner], def, { damage: p.damage, hitstun: 19, blockstun: p.big ? 20 : 12, push: p.big ? 9 : 5, heavy: true, knockdown: p.big, noMeter: p.big }, p.x, p.y, true);
       }
     }
     const [p0, p1] = [0, 1].map((o) => this.projectiles.filter((p) => p.alive && p.owner === o));
     for (const a of p0) for (const b of p1) {
-      if (Math.abs(a.x - b.x) < 26) { a.alive = b.alive = false; this.events.push({ type: 'clash', x: (a.x + b.x) / 2, y: a.y }); }
+      if (Math.abs(a.x - b.x) < 26) { a.alive = !b.big && a.big; b.alive = !a.big && b.big; this.events.push({ type: 'clash', x: (a.x + b.x) / 2, y: a.y }); }
     }
     if (this.projectiles.length > 8) this.projectiles = this.projectiles.filter((p) => p.alive);
   }

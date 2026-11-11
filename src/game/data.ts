@@ -95,14 +95,14 @@ function scaleMoves(frameMult: number, reach: number): Record<MoveId, MoveData> 
 
 export const FIGHTERS: Record<'chapa' | 'ares', FighterDef> = {
   chapa: {
-    id: 'chapa', name: 'CHAPA', title: 'EL GUERRERO', maxHp: 160, walk: 2.0, jumpV: 10.6, jumpVx: 2.5, power: 1.15,
-    specialName: 'CHAPAZO', proj: { speed: 4.2, damage: 14, core: '#ffe9a0', glow: '#ff7a1a', size: 17 },
-    stats: { fuerza: 4, velocidad: 2, tecnica: 3, aguante: 5 }, moves: scaleMoves(1.12, 1.04),
+    id: 'chapa', name: 'CHAPA', title: 'EL GUERRERO', maxHp: 150, walk: 2.0, jumpV: 10.6, jumpVx: 2.5, power: 1.06,
+    specialName: 'CHAPAZO', proj: { speed: 4.2, damage: 12, core: '#ffe9a0', glow: '#ff7a1a', size: 17 },
+    stats: { fuerza: 4, velocidad: 2, tecnica: 3, aguante: 5 }, moves: scaleMoves(1.2, 1.0),
   },
   ares: {
-    id: 'ares', name: 'ARES', title: 'EL VIAJERO', maxHp: 140, walk: 2.7, jumpV: 11.2, jumpVx: 3.1, power: 0.97,
+    id: 'ares', name: 'ARES', title: 'EL VIAJERO', maxHp: 140, walk: 2.7, jumpV: 11.2, jumpVx: 3.1, power: 1.0,
     specialName: 'LEVANTERA', proj: { speed: 6.2, damage: 10, core: '#e6fff9', glow: '#19c7b0', size: 13 },
-    stats: { fuerza: 3, velocidad: 4, tecnica: 5, aguante: 3 }, moves: scaleMoves(0.9, 1.0),
+    stats: { fuerza: 3, velocidad: 4, tecnica: 5, aguante: 3 }, moves: scaleMoves(0.88, 1.0),
   },
 };
 
