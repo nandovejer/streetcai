@@ -15,6 +15,15 @@ body { display: flex; align-items: center; justify-content: center; height: 100d
   font: 10px "Press Start 2P", monospace; padding: 0; cursor: pointer;
 }
 #sys button.off { color: #666; text-decoration: line-through; }
+#btn-mute svg { width: 20px; height: 20px; display: block; margin: auto; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+#btn-mute svg .fill { fill: currentColor; }
+#btn-mute .ic-off, #btn-mute.off .ic-on { display: none; }
+#btn-mute.off .ic-off { display: block; }
+#sys #btn-mute.off { text-decoration: none; color: #ff5a3c; }
+#btn-full svg { width: 18px; height: 18px; display: block; margin: auto; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: square; }
+#btn-full .ic-exit, #btn-full.on .ic-enter { display: none; }
+#btn-full.on .ic-exit { display: block; }
+#btn-full.hidden { display: none; }
 #btn-pause { display: none; }
 body[data-screen="fight"] #btn-pause { display: block; }
 

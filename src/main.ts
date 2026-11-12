@@ -83,7 +83,7 @@ async function boot() {
     if (e.repeat) return;
     audio.init();
     const k = e.code;
-    if (k === 'KeyM' && screen !== 'fight') { audio.toggleMute(); return; }
+    if (k === 'KeyM' && screen !== 'fight') { toggleSound(); return; }
     if (k === 'F2') { r.debug = !r.debug; e.preventDefault(); return; }
     if (screen === 'title') { if (k === 'Enter' || k === 'Space') act('title'); }
     else if (screen === 'select') {
@@ -106,15 +106,41 @@ async function boot() {
   });
 
   document.getElementById('btn-pause')!.addEventListener('click', () => act('pause'));
-  document.getElementById('btn-mute')!.addEventListener('click', (e) => {
+  const btnMute = document.getElementById('btn-mute')!;
+  const syncMute = () => {
+    btnMute.classList.toggle('off', audio.muted);
+    const label = audio.muted ? 'Poner sonido' : 'Quitar sonido';
+    btnMute.setAttribute('aria-label', label); btnMute.title = label;
+  };
+  syncMute();
+  function toggleSound() {
     audio.init();
-    (e.currentTarget as HTMLElement).classList.toggle('off', audio.toggleMute());
-  });
-  document.getElementById('btn-full')!.addEventListener('click', async () => {
+    audio.toggleMute();
+    syncMute();
+  }
+  btnMute.addEventListener('click', toggleSound);
+  // Primer gesto en cualquier parte de la página: arranca el audio (y la música).
+  window.addEventListener('pointerdown', () => audio.init(), { once: true, capture: true });
+  const btnFull = document.getElementById('btn-full')!;
+  type FsDoc = Document & { webkitFullscreenElement?: Element; webkitExitFullscreen?: () => Promise<void>; webkitFullscreenEnabled?: boolean };
+  type FsEl = HTMLElement & { webkitRequestFullscreen?: () => Promise<void> };
+  const fsDoc = document as FsDoc, fsRoot = document.documentElement as FsEl;
+  const isFull = () => !!(fsDoc.fullscreenElement || fsDoc.webkitFullscreenElement);
+  // iPhone no soporta la API de pantalla completa: ocultamos el botón.
+  if (!(fsDoc.fullscreenEnabled || fsDoc.webkitFullscreenEnabled)) btnFull.classList.add('hidden');
+  const syncFull = () => {
+    const on = isFull();
+    btnFull.classList.toggle('on', on);
+    btnFull.setAttribute('aria-label', on ? 'Salir de pantalla completa' : 'Pantalla completa');
+    btnFull.title = btnFull.getAttribute('aria-label')!;
+  };
+  document.addEventListener('fullscreenchange', syncFull);
+  document.addEventListener('webkitfullscreenchange', syncFull);
+  btnFull.addEventListener('click', async () => {
     try {
-      if (document.fullscreenElement) await document.exitFullscreen();
+      if (isFull()) await (fsDoc.exitFullscreen ? fsDoc.exitFullscreen() : fsDoc.webkitExitFullscreen?.());
       else {
-        await document.documentElement.requestFullscreen();
+        await (fsRoot.requestFullscreen ? fsRoot.requestFullscreen() : fsRoot.webkitRequestFullscreen?.());
         const so = window.screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
         if (so && so.lock) await so.lock('landscape').catch(() => undefined);
       }

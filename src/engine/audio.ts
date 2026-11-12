@@ -25,6 +25,7 @@ export class AudioManager {
     this.noise = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
     const d = this.noise.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    this.startMusic(); // la música suena por defecto desde el primer gesto
   }
 
   toggleMute() {
