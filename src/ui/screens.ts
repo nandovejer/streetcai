@@ -110,6 +110,97 @@ export function drawResult(r: Renderer, winnerId: 'chapa' | 'ares', loserId: 'ch
   for (const b of resultButtons()) drawButton(r, b, 10);
 }
 
+// ---- CONTINUE? (cuando pierde un jugador humano) ----
+export const CONTINUE_FROM = 9;
+export const CONTINUE_SECOND = 60; // frames por número
+
+/** Dígitos de bombillas, 6×8, al estilo de las recreativas. */
+const BULB_DIGITS: Record<string, string[]> = {
+  '0': ['.####.', '##..##', '##..##', '##..##', '##..##', '##..##', '##..##', '.####.'],
+  '1': ['..##..', '.###..', '####..', '..##..', '..##..', '..##..', '..##..', '######'],
+  '2': ['.####.', '##..##', '....##', '...##.', '..##..', '.##...', '##....', '######'],
+  '3': ['.####.', '##..##', '....##', '..###.', '....##', '....##', '##..##', '.####.'],
+  '4': ['...##.', '..###.', '.####.', '##.##.', '##.##.', '######', '...##.', '...##.'],
+  '5': ['######', '##....', '##....', '#####.', '....##', '....##', '##..##', '.####.'],
+  '6': ['.####.', '##..##', '##....', '#####.', '##..##', '##..##', '##..##', '.####.'],
+  '7': ['######', '##..##', '....##', '...##.', '..##..', '..##..', '..##..', '..##..'],
+  '8': ['.####.', '##..##', '##..##', '.####.', '##..##', '##..##', '##..##', '.####.'],
+  '9': ['.####.', '##..##', '##..##', '##..##', '.#####', '....##', '##..##', '.####.'],
+};
+
+function drawBulbs(r: Renderer, digit: string, x0: number, y0: number, pitch: number, glow: number) {
+  const c = r.ctx, rows = BULB_DIGITS[digit] || BULB_DIGITS['0'], rad = pitch * 0.46;
+  for (let j = 0; j < 8; j++) for (let i = 0; i < 6; i++) {
+    const x = x0 + i * pitch + pitch / 2, y = y0 + j * pitch + pitch / 2, lit = rows[j][i] === '#';
+    if (lit) {
+      const halo = c.createRadialGradient(x, y, 0, x, y, rad * 1.7);
+      halo.addColorStop(0, `rgba(255,170,40,${0.55 * glow})`); halo.addColorStop(1, 'rgba(255,90,0,0)');
+      c.fillStyle = halo; c.beginPath(); c.arc(x, y, rad * 1.7, 0, Math.PI * 2); c.fill();
+      const g = c.createRadialGradient(x - rad * 0.2, y - rad * 0.2, 0, x, y, rad);
+      g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, '#fff2b8'); g.addColorStop(0.85, '#ffb040'); g.addColorStop(1, '#c85a10');
+      c.fillStyle = g;
+    } else {
+      const g = c.createRadialGradient(x - rad * 0.35, y - rad * 0.35, 0, x, y, rad);
+      g.addColorStop(0, '#d0603a'); g.addColorStop(0.35, '#8a2410'); g.addColorStop(1, '#3a0a04');
+      c.fillStyle = g;
+    }
+    c.beginPath(); c.arc(x, y, rad, 0, Math.PI * 2); c.fill();
+  }
+}
+
+function gradText(r: Renderer, s: string, x: number, y: number, size: number, top: string, bottom: string, align: CanvasTextAlign = 'left') {
+  const c = r.ctx;
+  c.font = `${size}px "Press Start 2P", monospace`; c.textAlign = align; c.textBaseline = 'middle'; c.lineJoin = 'round';
+  c.lineWidth = size / 3.5; c.strokeStyle = '#000'; c.strokeText(s, x, y + 2);
+  const g = c.createLinearGradient(0, y - size / 2, 0, y + size / 2);
+  g.addColorStop(0, top); g.addColorStop(1, bottom);
+  c.fillStyle = g; c.fillText(s, x, y);
+}
+
+export function continueButtons(): Button[] {
+  return [
+    { x: 70, y: 316, w: 120, h: 28, label: 'SI', action: 'continue:yes', on: true },
+    { x: 210, y: 316, w: 120, h: 28, label: 'NO', action: 'continue:no' },
+  ];
+}
+
+/** t = frames desde que empezó la cuenta; overT >= 0 cuando ya es GAME OVER. */
+export function drawContinue(r: Renderer, loserId: 'chapa' | 'ares', t: number, overT: number, touch: boolean) {
+  r.time++;
+  r.begin();
+  const c = r.ctx;
+  c.fillStyle = '#000'; c.fillRect(-10, -10, VW + 20, VH + 20);
+  const count = Math.max(0, CONTINUE_FROM - Math.floor(t / CONTINUE_SECOND));
+  const inSec = (t % CONTINUE_SECOND) / CONTINUE_SECOND;
+
+  // retrato del derrotado (se apaga a gris al llegar a GAME OVER)
+  const img = r.assets.defeated[loserId];
+  const pw = 270, ph = img.height * (pw / img.width), px = 44, py = 312 - ph;
+  const grey = overT >= 0 ? Math.min(1, overT / 40) : 0;
+  c.save();
+  c.imageSmoothingEnabled = true;
+  if (grey > 0) c.filter = `grayscale(${grey}) brightness(${1 - grey * 0.45})`;
+  c.drawImage(img, px, py, pw, ph);
+  c.restore();
+
+  if (overT < 0) {
+    gradText(r, 'CONTINUE?', 40, 34, 22, '#ffd060', '#ff6a00');
+    gradText(r, String(count), 262, 34, 22, '#ffffff', '#9a9aa8');
+    gradText(r, 'FREE PLAY', 492, 34, 14, '#d8dcff', '#5a6cff', 'center');
+    // bombillas: el número "late" al principio de cada segundo
+    const glow = 1 - inSec * 0.45;
+    drawBulbs(r, String(count), 396, 72, 32, glow);
+    const blink = Math.floor(r.time / 20) % 2 === 0;
+    if (touch) for (const b of continueButtons()) drawButton(r, b, 9);
+    else if (blink) r.text('ENTER = SEGUIR   ESC = ABANDONAR', 186, 334, 6, '#ffd800');
+  } else {
+    const a = Math.min(1, overT / 30);
+    c.globalAlpha = a;
+    r.bigText('GAME OVER', VW / 2, VH / 2 - 10, 40);
+    c.globalAlpha = 1;
+  }
+}
+
 export function drawPause(r: Renderer): Button[] {
   r.begin();
   const c = r.ctx;

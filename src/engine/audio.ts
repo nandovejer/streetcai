@@ -1,5 +1,5 @@
 // Audio 100% sintetizado con Web Audio (sin ficheros): efectos y música arcade con cadencia andaluza.
-export type Sfx = 'punch' | 'kick' | 'heavy' | 'block' | 'jump' | 'land' | 'whoosh' | 'ko' | 'special' | 'select' | 'start' | 'win' | 'fall' | 'guardbreak';
+export type Sfx = 'punch' | 'kick' | 'heavy' | 'block' | 'jump' | 'land' | 'whoosh' | 'ko' | 'special' | 'select' | 'start' | 'win' | 'fall' | 'guardbreak' | 'tick' | 'gameover';
 
 const N = (semi: number) => 440 * Math.pow(2, semi / 12); // semitonos respecto a La4
 
@@ -67,6 +67,8 @@ export class AudioManager {
       case 'select': this.tone('square', 660, 880, 0.07, 0.15); break;
       case 'start': [0, 4, 7, 12].forEach((s, i) => this.tone('square', N(s), N(s), 0.12, 0.18, this.ctx!.currentTime + i * 0.08)); break;
       case 'win': [0, 4, 7, 12, 16].forEach((s, i) => this.tone('square', N(s - 5), N(s - 5), 0.2, 0.18, this.ctx!.currentTime + i * 0.13)); break;
+      case 'tick': this.tone('square', N(-5), N(-5), 0.09, 0.2); this.tone('square', N(-17), N(-17), 0.12, 0.14); break;
+      case 'gameover': [7, 3, 0, -5, -9].forEach((s, i) => this.tone('square', N(s - 5), N(s - 6), 0.32, 0.17, this.ctx!.currentTime + i * 0.26)); break;
     }
   }
 

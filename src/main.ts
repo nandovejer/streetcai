@@ -8,10 +8,10 @@ import { AI } from './game/ai';
 import { Difficulty, FIGHTERS, VH, VW } from './game/data';
 import { Match } from './game/match';
 import { Renderer } from './render/renderer';
-import { Settings, drawPause, drawResult, drawSelect, drawTitle, hitButton, pauseButtons, resultButtons, selectButtons } from './ui/screens';
+import { CONTINUE_FROM, CONTINUE_SECOND, Settings, continueButtons, drawContinue, drawPause, drawResult, drawSelect, drawTitle, hitButton, pauseButtons, resultButtons, selectButtons } from './ui/screens';
 import { isTouchDevice, setupTouch } from './ui/touch';
 
-type Screen = 'title' | 'select' | 'fight' | 'result';
+type Screen = 'title' | 'select' | 'fight' | 'result' | 'continue';
 
 async function boot() {
   const canvas = document.getElementById('game') as HTMLCanvasElement;
@@ -36,6 +36,8 @@ async function boot() {
   let demoAi: AI | null = null;
   let paused = false;
   let endT = 0;
+  // CONTINUE?: contT = frames de cuenta atrás; overT = frames de GAME OVER (-1 mientras cuenta)
+  let contT = 0, overT = -1;
 
   if (touch) { setupTouch(touchRoot, input.touch); document.body.classList.add('touch'); }
   const setScreen = (s: Screen) => {
@@ -66,6 +68,8 @@ async function boot() {
     else if (a === 'resume') paused = false;
     else if (a === 'pause') { if (screen === 'fight' && match && match.phase !== 'matchEnd') paused = !paused; }
     else if (a === 'title') { audio.play('start'); setScreen('select'); }
+    else if (a === 'continue:yes') { if (overT < 0 && contT > 20) startFight(); }
+    else if (a === 'continue:no') { if (overT < 0) gameOver(); else if (overT > 60) setScreen('title'); }
   };
 
   // Puntero sobre el canvas (menús)
@@ -76,6 +80,7 @@ async function boot() {
     else if (screen === 'select') act(hitButton(selectButtons(settings), x, y));
     else if (screen === 'result') act(hitButton(resultButtons(), x, y));
     else if (screen === 'fight' && paused) act(hitButton(pauseButtons(), x, y));
+    else if (screen === 'continue') act(overT >= 0 ? 'continue:no' : touch ? hitButton(continueButtons(), x, y) : 'continue:yes');
     else audio.init();
   });
 
@@ -99,6 +104,9 @@ async function boot() {
       if (k === 'Escape' || k === 'KeyP') act('pause');
       else if (paused && k === 'Enter') act('resume');
       else if (paused && k === 'KeyQ') act('menu');
+    } else if (screen === 'continue') {
+      if (k === 'Escape') act('continue:no');
+      else if (k === 'Enter' || k === 'Space') act(overT >= 0 ? 'continue:no' : 'continue:yes');
     } else if (screen === 'result') {
       if (k === 'Enter' || k === 'Space') act('rematch');
       else if (k === 'Escape') act('menu');
@@ -152,11 +160,34 @@ async function boot() {
     block: 'block', jump: 'jump', land: 'land', whoosh: 'whoosh', ko: 'ko', special: 'special', fall: 'fall', guardbreak: 'guardbreak', clash: 'heavy',
   };
 
+  function startContinue() {
+    contT = 0; overT = -1;
+    setScreen('continue');
+    audio.stopMusic();
+    audio.play('tick');
+  }
+  function gameOver() {
+    overT = 0;
+    audio.play('gameover');
+    audio.say('Game over');
+  }
+  const stepContinue = () => {
+    if (overT >= 0) { if (++overT > 240) setScreen('title'); return; }
+    const before = Math.floor(contT / CONTINUE_SECOND);
+    contT++;
+    const now = Math.floor(contT / CONTINUE_SECOND);
+    if (now !== before) { if (now > CONTINUE_FROM) gameOver(); else audio.play('tick'); }
+  };
+
   const stepFight = () => {
     const m = match!;
     if (m.phase === 'matchEnd') {
       if (++endT === 1) audio.play('win');
-      if (endT > 50) setScreen('result');
+      if (endT > 50) {
+        // Si pierde un humano (contra la CPU, o cualquiera en 2 jugadores): ¿CONTINUE?
+        if (settings.twoPlayers || m.matchWinner === 1) startContinue();
+        else setScreen('result');
+      }
       return;
     }
     const p1 = demoAi ? demoAi.next(m.f[0], m.f[1], m.projectiles) : input.get(0, settings.twoPlayers);
@@ -184,6 +215,8 @@ async function boot() {
       const you = settings.twoPlayers ? 'J1' : 'TU', other = settings.twoPlayers ? 'J2' : 'CPU';
       r.drawFight(match, [you, other]);
       if (paused) drawPause(r);
+    } else if (screen === 'continue' && match) {
+      drawContinue(r, match.f[1 - match.matchWinner].def.id as 'chapa' | 'ares', contT, overT, touch);
     } else if (screen === 'result' && match) {
       const w = match.matchWinner, win = match.f[w].def.id, lose = match.f[1 - w].def.id;
       const head = settings.twoPlayers ? `GANA J${w + 1}` : w === 0 ? '¡HAS GANADO!' : 'HAS PERDIDO';
@@ -200,6 +233,13 @@ async function boot() {
       stepFight(); if (i % 2 === 0) draw();
       if (params.has('untilSuper') && match!.superFreeze > 0 && match!.superFreeze < 30) { paused = true; break; }
     }
+  } else if (params.get('screen') === 'continue') {
+    // Pruebas: ?screen=continue&lose=ares|chapa abre directamente la cuenta atrás.
+    const lose = params.get('lose') === 'ares' ? 'ares' : 'chapa';
+    settings.char = lose;
+    match = new Match(FIGHTERS[lose], FIGHTERS[lose === 'chapa' ? 'ares' : 'chapa']);
+    match.matchWinner = 1;
+    startContinue();
   } else if (params.has('screen')) setScreen(params.get('screen') as Screen);
   else setScreen('title');
   if (params.has('debug')) r.debug = true;
@@ -213,6 +253,7 @@ async function boot() {
     while (acc >= STEP && n++ < 5) {
       acc -= STEP;
       if (screen === 'fight' && !paused) stepFight();
+      else if (screen === 'continue') stepContinue();
     }
     draw();
     requestAnimationFrame(loop);

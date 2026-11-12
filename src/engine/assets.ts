@@ -4,6 +4,8 @@ export interface Atlas { img: HTMLImageElement; frames: Record<string, AtlasFram
 export interface Assets {
   atlas: Record<string, Atlas>;
   portrait: Record<string, HTMLImageElement>;
+  /** Retrato de derrota para la pantalla de CONTINUE. */
+  defeated: Record<string, HTMLImageElement>;
   bg: HTMLImageElement;
 }
 
@@ -19,16 +21,18 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 export async function loadAssets(ids: string[]): Promise<Assets> {
-  const out: Assets = { atlas: {}, portrait: {}, bg: await loadImage(`${base}assets/stages/plaza/bg.webp`) };
+  const out: Assets = { atlas: {}, portrait: {}, defeated: {}, bg: await loadImage(`${base}assets/stages/plaza/bg.webp`) };
   await Promise.all(ids.map(async (id) => {
     const dir = `${base}assets/fighters/${id}/`;
-    const [img, meta, portrait] = await Promise.all([
+    const [img, meta, portrait, defeated] = await Promise.all([
       loadImage(dir + 'atlas.png'),
       fetch(dir + 'atlas.json').then((r) => r.json()),
       loadImage(dir + 'portrait.png'),
+      loadImage(dir + 'defeated.webp'),
     ]);
     out.atlas[id] = { img, frames: meta.frames, anims: meta.anims };
     out.portrait[id] = portrait;
+    out.defeated[id] = defeated;
   }));
   return out;
 }
