@@ -2,7 +2,7 @@
 export const VW = 640;
 export const VH = 360;
 export const STAGE_W = 720;
-export const GROUND_Y = 332;
+export const GROUND_Y = 344;
 export const GRAVITY = 0.62;
 export const SPRITE_SCALE = 1.1;
 export const ROUND_TIME = 99;

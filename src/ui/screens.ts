@@ -13,6 +13,8 @@ export function drawTitle(r: Renderer, touch: boolean) {
   r.drawStage(40, 0.35);
   r.drawPetals();
   const t = r.time;
+  r.drawShadow(190, 50, 8, 0.7);
+  r.drawShadow(450, 50, 8, 0.7);
   r.drawSprite('chapa', `idle_${Math.floor(t / 7) % 8}`, 190, GROUND_Y, 1, 1.25);
   r.drawSprite('ares', `idle_${Math.floor(t / 7) % 8}`, 450, GROUND_Y, -1, 1.25);
   const bob = Math.sin(t * 0.05) * 3;

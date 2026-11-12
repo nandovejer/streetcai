@@ -96,12 +96,26 @@ export class Renderer {
     c.restore();
   }
 
+  /** Sombra difusa sobre el suelo (elipse con degradado radial). */
+  drawShadow(x: number, rx: number, ry: number, alpha: number) {
+    const c = this.ctx;
+    c.save();
+    c.translate(x, GROUND_Y - 1.5);
+    c.scale(1, ry / rx);
+    const g = c.createRadialGradient(0, 0, 0, 0, 0, rx);
+    g.addColorStop(0, `rgba(0,0,0,${alpha})`);
+    g.addColorStop(0.7, `rgba(0,0,0,${alpha * 0.9})`);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = g;
+    c.beginPath(); c.arc(0, 0, rx, 0, Math.PI * 2); c.fill();
+    c.restore();
+  }
+
   private drawFighter(f: Fighter, m: Match) {
     const c = this.ctx;
     const sx = f.x - this.camX, sy = GROUND_Y - f.y;
     const sh = Math.max(0.45, 1 - f.y / 220), lying = f.isDown && f.landed;
-    c.fillStyle = 'rgba(0,0,0,0.38)';
-    c.beginPath(); c.ellipse(sx, GROUND_Y + 2, (lying ? 52 : 30) * sh, 6 * sh, 0, 0, Math.PI * 2); c.fill();
+    this.drawShadow(sx, (lying ? 64 : 46) * sh, 7 * sh, 0.7 * sh);
     const jitter = m.hitstop > 0 && (f.state === 'hit' || f.state === 'knockdown' || f.state === 'ko') ? (m.frame % 2 ? 2 : -2) : 0;
     if (f.state === 'victory' || (f.state === 'attack' && f.move?.projectile && f.t < f.move.startup)) {
       // aura de carga del especial
@@ -257,11 +271,11 @@ export class Renderer {
       }
       // barra de súper
       const mx0 = i === 0 ? VW / 2 - 136 : VW / 2 + 16, full = f.meter >= 100, blink = Math.floor(this.time / 6) % 2 === 0;
-      c.fillStyle = '#000'; c.fillRect(mx0 - 2, VH - 16, 124, 10);
-      c.fillStyle = '#20203a'; c.fillRect(mx0, VH - 14, 120, 6);
+      c.fillStyle = '#000'; c.fillRect(mx0 - 2, VH - 9, 124, 8);
+      c.fillStyle = '#20203a'; c.fillRect(mx0, VH - 8, 120, 5);
       c.fillStyle = full ? (blink ? '#fff' : '#ffb400') : '#2f9bff';
-      const mw = 120 * (f.meter / 100); c.fillRect(i === 0 ? mx0 : mx0 + 120 - mw, VH - 14, mw, 6);
-      this.text(full ? 'SUPER!' : 'SUPER', i === 0 ? mx0 - 6 : mx0 + 126, VH - 10.5, 6, full && blink ? '#ffd800' : '#9aa0c8', i === 0 ? 'right' : 'left');
+      const mw = 120 * (f.meter / 100); c.fillRect(i === 0 ? mx0 : mx0 + 120 - mw, VH - 8, mw, 5);
+      this.text(full ? 'SUPER!' : 'SUPER', i === 0 ? mx0 - 6 : mx0 + 126, VH - 5, 6, full && blink ? '#ffd800' : '#9aa0c8', i === 0 ? 'right' : 'left');
     }
     // reloj
     c.fillStyle = '#000'; c.fillRect(VW / 2 - 24, y - 8, 48, 32);
