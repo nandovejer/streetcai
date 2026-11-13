@@ -5,6 +5,10 @@ Juego de lucha arcade 2D en el navegador (escritorio y móvil), ambientado en C�
 - **Luchadores:** Chapa (El Guerrero), Ares (El Viajero), Alba (El Marinero) y Martín (El Veterano).
 - **Escenarios:** Plaza de las Flores y La Caleta (se elige en la selección, o al azar en cada combate).
 
+## Portada
+
+Puerta de Tierra de fondo. La primera vez se ve una intro de unos 3 s: la cámara se abre desde la torre, las letras de STREET caen una a una, CAI se estampa con destello, onda y explosión de papelillos, y un brillo recorre el título. Después queda el balanceo en bucle. Enter (o un toque) salta la intro; `?introAt=N` la congela en el frame N para pruebas.
+
 ## Selección de luchador
 
 Al estilo de las recreativas: arriba el mapa de Cádiz con el barrio de cada luchador (Chapa en el Baluarte de la Candelaria, Ares en la playa de Santa María del Mar, Alba en La Caleta y Martín en el Teatro Falla). El cursor 1P (y 2P) se desliza por el mapa al cambiar de luchador. Abajo, el retrato grande del elegido y la fila de caras; las opciones de modo, dificultad y escenario van en la esquina del mar. Se puede elegir tocando la cara o el barrio en el mapa.

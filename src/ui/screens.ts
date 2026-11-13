@@ -16,23 +16,160 @@ export interface Button { x: number; y: number; w: number; h: number; label: str
 
 const COL_J1 = '#ffd800', COL_J2 = '#3cb8ff';
 
-export function drawTitle(r: Renderer, touch: boolean) {
+// ---- Portada con intro animada (solo la primera vez) ----
+export interface TitleHooks { play: (sfx: 'punch' | 'heavy' | 'ko' | 'whoosh' | 'special' | 'start' | 'land') => void; say: (text: string) => void }
+/** Momentos de la intro (en frames a 60 Hz). */
+const INTRO = { tiltEnd: 80, letters: 52, letterGap: 7, letterFall: 13, caiStart: 104, caiHit: 116, shine: 128, shineLen: 30, press: 150, end: 160 };
+const TITLE_Y = [50, 104];
+let introStart = -1, introLast = -1, introSkipped = false, titleShake = 0;
+/** Pruebas: congela la intro en un frame (?introAt=N). */
+let introFrozen = -1;
+export function freezeTitleIntro(n: number) { introFrozen = n; }
+interface TitleFx { x: number; y: number; life: number; max: number; kind: 'dust' | 'ring'; letter?: number }
+let titleFx: TitleFx[] = [];
+
+/** Frames de intro transcurridos (o el final si ya terminó / se saltó). */
+function introFrame(): number {
+  if (introSkipped) return INTRO.end + 1;
+  if (introFrozen >= 0) return introFrozen;
+  if (introStart < 0) introStart = performance.now();
+  return (performance.now() - introStart) / (1000 / 60);
+}
+export function titleIntroPlaying() { return !introSkipped && introFrame() < INTRO.press; }
+export function skipTitleIntro(r: Renderer) {
+  if (introSkipped) return;
+  introSkipped = true; titleFx = []; titleShake = 0;
+  r.burstPetals(VW / 2, 80, 40);
+}
+
+/** Dibuja una palabra letra a letra con el estilo de bigText (contorno en dos pasadas para que no se pisen). */
+function drawWord(r: Renderer, word: string, cx: number, y: number, size: number, letter: (i: number) => { dy: number; scale: number; alpha: number }) {
+  const c = r.ctx;
+  c.font = `${size}px "Press Start 2P", monospace`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineJoin = 'round';
+  const total = c.measureText(word).width, x0 = cx - total / 2;
+  const ls = [...word].map((ch, i) => ({ ch, x: x0 + c.measureText(word.slice(0, i)).width + c.measureText(ch).width / 2, ...letter(i) }));
+  for (let pass = 0; pass < 3; pass++) {
+    for (const l of ls) {
+      if (l.alpha <= 0) continue;
+      c.save(); c.globalAlpha = Math.min(1, l.alpha);
+      c.translate(l.x, y + l.dy); c.scale(l.scale, l.scale);
+      if (pass === 0) { c.lineWidth = size / 3; c.strokeStyle = '#1a0500'; c.strokeText(l.ch, 0, 2); }
+      else if (pass === 1) { c.lineWidth = size / 6; c.strokeStyle = '#fff'; c.strokeText(l.ch, 0, 0); }
+      else {
+        const g = c.createLinearGradient(0, -size / 2, 0, size / 2);
+        g.addColorStop(0, '#fff36b'); g.addColorStop(0.5, '#ffb400'); g.addColorStop(1, '#e02a10');
+        c.fillStyle = g; c.fillText(l.ch, 0, 0);
+      }
+      c.restore();
+    }
+  }
+  return ls;
+}
+
+const easeOut = (k: number) => 1 - Math.pow(1 - Math.min(1, Math.max(0, k)), 3);
+function bounce(k: number) {
+  k = Math.min(1, Math.max(0, k));
+  if (k < 0.6) return (k / 0.6) ** 2;              // caída
+  const b = (k - 0.6) / 0.4;                        // rebote corto
+  return 1 - Math.sin(b * Math.PI) * 0.12 * (1 - b);
+}
+
+export function drawTitle(r: Renderer, touch: boolean, hooks?: TitleHooks) {
   r.time++;
-  r.begin();
-  const c = r.ctx, t = r.time;
-  // fondo: Puerta de Tierra, con la torre a la vista sobre el cartel
+  const t = r.time, f = introFrame(), prev = introLast;
+  introLast = f;
+  const crossed = (at: number) => prev < at && f >= at;
+  const c = r.ctx;
+  titleShake *= 0.86;
+  r.begin(titleShake);
+
+  // fondo: la cámara baja desde el cielo hasta encuadrar Puerta de Tierra
+  const tilt = easeOut(f / INTRO.tiltEnd);
+  const zoom = 2.1 - 1.1 * tilt;
+  const dw = VW * zoom, dh = VH * zoom;
   c.save(); c.imageSmoothingEnabled = true;
-  c.drawImage(r.assets.title, 0, 0, VW, VH);
+  c.drawImage(r.assets.title, (VW - dw) / 2, 0, dw, dh); // anclado arriba: empieza mirando al cielo y la bandera
   c.restore();
-  // velo suave en la franja del cartel para que se lea sobre la muralla
-  const g = c.createLinearGradient(0, 170, 0, 310);
-  g.addColorStop(0, 'rgba(6,8,24,0)'); g.addColorStop(0.5, 'rgba(6,8,24,0.35)'); g.addColorStop(1, 'rgba(6,8,24,0)');
-  c.fillStyle = g; c.fillRect(0, 170, VW, 140);
+  if (crossed(1)) hooks?.play('whoosh');
   r.drawPetals();
-  const bob = Math.sin(t * 0.05) * 3;
-  r.bigText('STREET', VW / 2, 208 + bob, 46);
-  r.bigText('CAI', VW / 2, 260 + bob, 58);
-  if (Math.floor(t / 30) % 2 === 0) r.text(touch ? 'TOCA PARA EMPEZAR' : 'PULSA ENTER PARA EMPEZAR', VW / 2, 330, 10, '#ffd800');
+
+  // STREET: letras que caen una a una
+  const bobAmp = Math.min(1, Math.max(0, (f - INTRO.press) / 30)) * 3;
+  const bob = Math.sin(t * 0.05) * bobAmp;
+  const lettersStart = INTRO.letters;
+  'STREET'.split('').forEach((_, i) => {
+    const at = lettersStart + i * INTRO.letterGap + INTRO.letterFall;
+    if (crossed(at)) {
+      hooks?.play('punch'); titleShake = Math.max(titleShake, 3);
+      titleFx.push({ x: 0, y: 0, life: 14, max: 14, kind: 'dust', letter: i });
+    }
+  });
+  const street = drawWord(r, 'STREET', VW / 2, TITLE_Y[0] + bob, 46, (i) => {
+    const k = (f - lettersStart - i * INTRO.letterGap) / INTRO.letterFall;
+    if (k <= 0) return { dy: 0, scale: 1, alpha: 0 };
+    return { dy: -(1 - bounce(k)) * (TITLE_Y[0] + 60), scale: 1, alpha: 1 };
+  });
+
+  // CAI: se estampa desde muy grande
+  if (crossed(INTRO.caiStart)) hooks?.play('whoosh');
+  if (crossed(INTRO.caiHit)) {
+    hooks?.play('heavy'); hooks?.play('ko'); hooks?.say('¡Street Cai!');
+    titleShake = 12;
+    titleFx.push({ x: VW / 2, y: TITLE_Y[1], life: 22, max: 22, kind: 'ring' });
+    r.burstPetals(VW / 2, TITLE_Y[1], 70);
+  }
+  const kc = (f - INTRO.caiStart) / (INTRO.caiHit - INTRO.caiStart);
+  const caiScale = kc >= 1 ? 1 : 1 + 5 * Math.pow(1 - Math.max(0, kc), 2.2);
+  drawWord(r, 'CAI', VW / 2, TITLE_Y[1] + bob, 58, () => ({ dy: 0, scale: caiScale, alpha: kc <= 0 ? 0 : Math.min(1, kc * 2.5) }));
+
+  // polvo bajo cada letra que aterriza y onda expansiva del golpe
+  for (const fx of titleFx) {
+    const k = 1 - fx.life / fx.max;
+    if (fx.kind === 'dust') {
+      const l = street[fx.letter ?? 0]; if (!l) continue;
+      c.fillStyle = `rgba(255,240,210,${0.5 * (1 - k)})`;
+      for (const side of [-1, 1]) { c.beginPath(); c.arc(l.x + side * (8 + k * 14), TITLE_Y[0] + 20 - k * 4, 3 + k * 5, 0, Math.PI * 2); c.fill(); }
+    } else {
+      c.strokeStyle = `rgba(255,230,140,${1 - k})`; c.lineWidth = 4 * (1 - k) + 1;
+      c.beginPath(); c.ellipse(fx.x, fx.y, 40 + k * 260, 14 + k * 90, 0, 0, Math.PI * 2); c.stroke();
+    }
+    fx.life--;
+  }
+  if (titleFx.length) titleFx = titleFx.filter((fx) => fx.life > 0);
+
+  // destello blanco del impacto
+  const flash = f >= INTRO.caiHit ? 1 - (f - INTRO.caiHit) / 14 : 0;
+  if (flash > 0 && !introSkipped) { c.fillStyle = `rgba(255,255,255,${0.85 * flash})`; c.fillRect(-20, -20, VW + 40, VH + 40); }
+
+  // brillo metálico que recorre el título (en la intro y luego cada pocos segundos)
+  // brillo: en la intro y después cada 7 s aprox.
+  const sh = f < INTRO.shine + INTRO.shineLen ? (f - INTRO.shine) / INTRO.shineLen : (t % 420) / INTRO.shineLen;
+  if (sh > 0 && sh < 1 && (f >= INTRO.shine)) {
+    const bx = -120 + sh * (VW + 240);
+    for (const [word, y, size] of [['STREET', TITLE_Y[0] + bob, 46], ['CAI', TITLE_Y[1] + bob, 58]] as const) {
+      c.save();
+      c.font = `${size}px "Press Start 2P", monospace`; c.textAlign = 'center'; c.textBaseline = 'middle';
+      const g = c.createLinearGradient(bx - 40, y - 30, bx + 40, y + 30);
+      g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, 'rgba(255,255,255,0.85)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+      c.fillStyle = g; c.fillText(word, VW / 2, y);
+      c.restore();
+    }
+    if (crossed(INTRO.shine)) hooks?.play('special');
+  }
+
+  // fundido desde negro al principio
+  if (f < 30 && !introSkipped) { c.fillStyle = `rgba(0,0,0,${1 - f / 30})`; c.fillRect(-20, -20, VW + 40, VH + 40); }
+
+  // PULSA ENTER
+  if (f >= INTRO.press) {
+    if (crossed(INTRO.press)) hooks?.play('start');
+    const fade = Math.min(1, (f - INTRO.press) / 15);
+    if (Math.floor(t / 30) % 2 === 0 || f < INTRO.press + 30) {
+      c.globalAlpha = fade;
+      r.text(touch ? 'TOCA PARA EMPEZAR' : 'PULSA ENTER PARA EMPEZAR', VW / 2, 330, 10, '#ffd800');
+      c.globalAlpha = 1;
+    }
+  }
 }
 
 // ---- Selección de luchador: mapa de Cádiz al estilo de las recreativas ----

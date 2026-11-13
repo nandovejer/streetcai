@@ -8,7 +8,7 @@ import { AI } from './game/ai';
 import { Difficulty, FIGHTERS, FIGHTER_IDS, FighterId, STAGE_IDS, StageId, VH, VW } from './game/data';
 import { Match } from './game/match';
 import { Renderer } from './render/renderer';
-import { CONTINUE_FROM, CONTINUE_SECOND, STAGE_CHOICES, Settings, VERSUS_FRAMES, continueButtons, drawContinue, drawPause, drawResult, drawSelect, drawTitle, drawVersus, hitButton, pauseButtons, resultButtons, selectButtons } from './ui/screens';
+import { CONTINUE_FROM, CONTINUE_SECOND, STAGE_CHOICES, Settings, VERSUS_FRAMES, continueButtons, drawContinue, drawPause, drawResult, drawSelect, drawTitle, drawVersus, freezeTitleIntro, skipTitleIntro, titleIntroPlaying, hitButton, pauseButtons, resultButtons, selectButtons } from './ui/screens';
 import { isTouchDevice, setupTouch } from './ui/touch';
 
 type Screen = 'title' | 'select' | 'versus' | 'fight' | 'result' | 'continue';
@@ -119,7 +119,7 @@ async function boot() {
   canvas.addEventListener('pointerdown', (e) => {
     const b = canvas.getBoundingClientRect();
     const x = ((e.clientX - b.left) / b.width) * VW, y = ((e.clientY - b.top) / b.height) * VH;
-    if (screen === 'title') act('title');
+    if (screen === 'title') { if (titleIntroPlaying()) skipTitleIntro(r); else act('title'); }
     else if (screen === 'select') act(hitButton(selectButtons(settings), x, y));
     else if (screen === 'result') act(hitButton(resultButtons(stage >= ladder.length - 1), x, y));
     else if (screen === 'versus') act('skip');
@@ -134,7 +134,7 @@ async function boot() {
     const k = e.code;
     if (k === 'KeyM' && screen !== 'fight') { toggleSound(); return; }
     if (k === 'F2') { r.debug = !r.debug; e.preventDefault(); return; }
-    if (screen === 'title') { if (k === 'Enter' || k === 'Space') act('title'); }
+    if (screen === 'title') { if (k === 'Enter' || k === 'Space') { if (titleIntroPlaying()) skipTitleIntro(r); else act('title'); } }
     else if (screen === 'select') {
       const two = settings.twoPlayers;
       if (k === 'KeyA' || (!two && k === 'ArrowLeft')) moveCursor(0, -1);
@@ -258,9 +258,10 @@ async function boot() {
     m.events.length = 0;
   };
 
+  const titleHooks = { play: (s: Parameters<AudioManager['play']>[0]) => audio.play(s), say: (txt: string) => audio.say(txt) };
   const draw = () => {
     r.stage = screen === 'versus' || screen === 'fight' || screen === 'result' ? fightStage : 'plaza';
-    if (screen === 'title') drawTitle(r, touch);
+    if (screen === 'title') drawTitle(r, touch, titleHooks);
     else if (screen === 'select') drawSelect(r, settings, touch);
     else if (screen === 'fight' && match) {
       const you = settings.twoPlayers ? 'J1' : 'TU', other = settings.twoPlayers ? 'J2' : 'CPU';
@@ -322,6 +323,7 @@ async function boot() {
   } else if (params.has('screen')) { if (params.has('2p')) settings.twoPlayers = true; setScreen(params.get('screen') as Screen); }
   else setScreen('title');
   if (params.has('debug')) r.debug = true;
+  if (params.has('introAt')) freezeTitleIntro(Number(params.get('introAt')));
 
   if (import.meta.env.DEV) (window as unknown as Record<string, unknown>).__sc = { get match() { return match; }, get screen() { return screen; }, get paused() { return paused; } };
   let last = performance.now(), acc = 0;

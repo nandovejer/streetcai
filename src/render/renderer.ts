@@ -5,7 +5,7 @@ import { Fighter, GameEvent } from '../game/fighter';
 import { Match } from '../game/match';
 
 interface Particle { x: number; y: number; vx: number; vy: number; life: number; max: number; kind: 'spark' | 'dust' | 'flash' | 'ring'; color: string; size: number }
-interface Petal { x: number; y: number; vx: number; vy: number; ph: number; color: string }
+interface Petal { x: number; y: number; vx: number; vy: number; ph: number; color: string; temp?: boolean; size?: number }
 interface Gull { x: number; y: number; vx: number; ph: number; size: number }
 
 export const FONT = '"Press Start 2P", monospace';
@@ -91,12 +91,29 @@ export class Renderer {
   drawPetals() {
     const c = this.ctx;
     for (const p of this.petals) {
-      p.ph += 0.04; p.x += p.vx + Math.sin(p.ph) * 0.3; p.y += p.vy;
-      if (p.y > GROUND_Y + 8 || p.x < -5) { p.x = Math.random() * (VW + 100); p.y = -5; }
-      c.fillStyle = p.color; c.globalAlpha = 0.85;
-      c.fillRect(Math.round(p.x), Math.round(p.y), 2, Math.sin(p.ph * 2) > 0 ? 2 : 1);
+      if (p.temp) {
+        // confeti de una explosión: sale disparado, frena y cae girando
+        p.ph += 0.25; p.vx *= 0.96; p.vy = p.vy * 0.96 + 0.06; p.x += p.vx + Math.sin(p.ph * 0.3) * 0.4; p.y += p.vy;
+      } else {
+        p.ph += 0.04; p.x += p.vx + Math.sin(p.ph) * 0.3; p.y += p.vy;
+        if (p.y > GROUND_Y + 8 || p.x < -5) { p.x = Math.random() * (VW + 100); p.y = -5; }
+      }
+      const sz = p.size || 2;
+      c.fillStyle = p.color; c.globalAlpha = 0.9;
+      c.fillRect(Math.round(p.x), Math.round(p.y), sz, Math.sin(p.ph * 2) > 0 ? sz : Math.max(1, sz / 2));
     }
     c.globalAlpha = 1;
+    if (this.petals.some((p) => p.temp && p.y > VH + 10)) this.petals = this.petals.filter((p) => !p.temp || p.y <= VH + 10);
+  }
+
+  /** Explosión de papelillos desde (x, y). */
+  burstPetals(x: number, y: number, n = 60) {
+    const cols = ['#ff7aa8', '#ffd1e0', '#ffe27a', '#c58bff', '#ffffff', '#7fe0ff', '#ff5a3c'];
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, sp = 2 + Math.random() * 5;
+      this.petals.push({ x: x + (Math.random() - 0.5) * 160, y: y + (Math.random() - 0.5) * 30, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 2.5,
+        ph: Math.random() * 6, color: cols[i % cols.length], temp: true, size: 2 + (i % 3 === 0 ? 1 : 0) });
+    }
   }
 
   /** Dibuja un frame del atlas con los pies en (sx, sy). */
