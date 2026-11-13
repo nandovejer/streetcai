@@ -196,6 +196,7 @@ export const HOMES: Record<FighterId, { x: number; y: number; place: string }> =
   ares: { x: 1030, y: 786, place: 'SANTA MARIA DEL MAR' },
   alba: { x: 342, y: 600, place: 'LA CALETA' },
   martin: { x: 592, y: 346, place: 'TEATRO FALLA' },
+  selu: { x: 742, y: 478, place: 'PLAZA DE LAS FLORES' },
 };
 const CARD = 56, CARD_GAP = 6, CARD_Y = 270;
 const cardX = (i: number) => (VW - (FIGHTER_IDS.length * CARD + (FIGHTER_IDS.length - 1) * CARD_GAP)) / 2 + i * (CARD + CARD_GAP);
@@ -321,10 +322,10 @@ export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
   else {
     r.text('RIVALES', VW - 8, 236, 7, COL_J2, 'right');
     FIGHTER_IDS.filter((id) => id !== s.char).forEach((id, k) => {
-      const yy = 248 + k * 26;
-      c.fillStyle = '#000'; c.fillRect(VW - 33, yy - 1, 26, 26);
-      r.drawPortrait(id, VW - 32, yy, 24);
-      r.text(FIGHTERS[id].name, VW - 38, yy + 12, 6, '#d8d8e8', 'right');
+      const yy = 246 + k * 23;
+      c.fillStyle = '#000'; c.fillRect(VW - 30, yy - 1, 23, 23);
+      r.drawPortrait(id, VW - 29, yy, 21);
+      r.text(FIGHTERS[id].name, VW - 35, yy + 11, 6, '#d8d8e8', 'right');
     });
   }
 
@@ -491,7 +492,7 @@ export function drawContinue(r: Renderer, loserId: FighterId, t: number, overT: 
     gradText(r, 'CONTINUE?', 40, 34, 22, '#ffd060', '#ff6a00');
     gradText(r, String(count), 262, 34, 22, '#ffffff', '#9a9aa8');
     const n = getCredits();
-    gradText(r, `CREDIT ${n}`, 492, 34, 14, n ? '#d8dcff' : '#ffb0a0', n ? '#5a6cff' : '#ff3b1f', 'center');
+    gradText(r, `CREDIT ${n}`, 492, 342, 12, n ? '#d8dcff' : '#ffb0a0', n ? '#5a6cff' : '#ff3b1f', 'center');
     // bombillas: el número "late" al principio de cada segundo
     const glow = 1 - inSec * 0.45;
     drawBulbs(r, String(count), 396, 72, 32, glow);

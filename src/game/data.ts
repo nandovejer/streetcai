@@ -65,11 +65,11 @@ const BASE_MOVES: Record<MoveId, MoveData> = {
 };
 
 /** Luchadores disponibles, en el orden en que aparecen en la selección. */
-export const FIGHTER_IDS = ['chapa', 'ares', 'alba', 'martin'] as const;
+export const FIGHTER_IDS = ['chapa', 'ares', 'alba', 'martin', 'selu'] as const;
 export type FighterId = (typeof FIGHTER_IDS)[number];
 
 /** Escenario del barrio de cada luchador (el suyo en el mapa de la selección). */
-export const HOME_STAGE: Record<FighterId, StageId> = { chapa: 'candelaria', ares: 'santamaria', alba: 'caleta', martin: 'falla' };
+export const HOME_STAGE: Record<FighterId, StageId> = { chapa: 'candelaria', ares: 'santamaria', alba: 'caleta', martin: 'falla', selu: 'plaza' };
 
 export interface FighterDef {
   id: FighterId;
@@ -122,6 +122,12 @@ export const FIGHTERS: Record<FighterId, FighterDef> = {
     id: 'martin', name: 'MARTIN', title: 'EL VETERANO', maxHp: 136, walk: 2.5, jumpV: 10.9, jumpVx: 2.9, power: 1.0,
     specialName: 'SOMBRERAZO', proj: { speed: 5.4, damage: 11, core: '#ffe9b8', glow: '#b06a2a', size: 14 },
     stats: { fuerza: 3, velocidad: 4, tecnica: 4, aguante: 4 }, moves: scaleMoves(0.95, 1.0),
+  },
+  // Dúo de carnaval: improvisación a dos, técnico y con algo más de alcance.
+  selu: {
+    id: 'selu', name: 'SELU', title: 'EL DUO', maxHp: 140, walk: 2.4, jumpV: 10.6, jumpVx: 2.7, power: 1.0,
+    specialName: 'CHIRIGOTA', proj: { speed: 5.0, damage: 11, core: '#fff0ff', glow: '#b040ff', size: 15 },
+    stats: { fuerza: 3, velocidad: 3, tecnica: 4, aguante: 3 }, moves: scaleMoves(1.0, 1.06),
   },
 };
 

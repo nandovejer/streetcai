@@ -11,6 +11,7 @@ SOURCES = {
     'chapa': 'documentacion/chapa-derrotado.png',
     'alba': 'documentacion/alba-derrotado.png',
     'martin': 'documentacion/martin-derrotado.png',
+    'selu': 'documentacion/selu-derrotado.png',
 }
 OUT_W = 420  # ancho final (px); se dibuja suavizado a ~210 px lógicos
 

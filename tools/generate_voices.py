@@ -5,8 +5,7 @@ Requiere: piper-tts, y ffmpeg en el PATH.
 Voz por defecto: es_ES-sharvard-medium, locutor masculino (español de España, CC-BY 3.0: hay que citar
 el corpus Sharvard, ver la pantalla de créditos), descargable de
 https://huggingface.co/rhasspy/piper-voices/tree/main/es/es_ES/sharvard/medium
-Cada frase se pasa por un filtro de "locutor de recreativa" (algo más grave, comprimido, con un
-poco de eco de pabellón) y se guarda en MP3 mono.
+Cada frase se pasa por un filtro de voz robot de recreativa (metálica, 8 bits) y se guarda en MP3 mono.
 """
 import os, subprocess, sys, tempfile, wave
 from piper import PiperVoice, SynthesisConfig
@@ -18,13 +17,14 @@ FIGHTERS = {  # id: (nombre hablado, especial hablado)
     'ares': ('Are', 'Levantera'),
     'alba': ('Alba', 'Marejá'),
     'martin': ('Martín', 'Sombreraso'),
+    'selu': ('Selu', 'Chirigota'),
 }
 
 def phrases():
     p = {
         'round1': '¡Ronda uno!', 'round2': '¡Ronda do!', 'round3': '¡Ronda tre!',
         'round4': '¡Ronda cuatro!', 'round5': '¡Ronda sinco!',
-        'fight': '¡A peleá, picha!', 'ko': '¡Kei ou!', 'time': '¡Tiempo!', 'perfect': '¡Perfeto!', 'draw': '¡Empate, quillo!',
+        'fight': '¡A peleá, picha!', 'ko': '¡Kei ou!', 'time': '¡Tiempo!', 'perfect': '¡Perfecto!', 'draw': '¡Empate, quillo!',
         'title': '¡Strit Cai!', 'gameover': '¡Se acabó lo que se daba!', 'select': '¡Elige tu luchadó!',
         'continue': '¿Sigue, quillo?', 'champion': '¡Campeón de Cai!',
     }
@@ -35,10 +35,10 @@ def phrases():
             if oid != fid: p[f'vs_{fid}_{oid}'] = f'¡{name} contra {oname}!'
     return p
 
-# Filtro de locutor: 4 % más grave sin cambiar la duración, realce de graves, compresión, eco corto.
-FILTER = ('asetrate=22050*0.96,aresample=44100,atempo=1/0.96,'
-          'bass=g=4:f=140,acompressor=threshold=-18dB:ratio=4:attack=5:release=80:makeup=4,'
-          'aecho=0.8:0.6:45|90:0.22|0.12,'
+# Filtro de voz robot de recreativa: fase constante en la FFT (voz metálica de tono plano), luego
+# baja resolución a 16 kHz y 8 bits (sonido "digitalizado" de los 90) y normalización.
+FILTER = ("afftfilt=real='hypot(re,im)*cos(0)':imag='hypot(re,im)*sin(0)':win_size=512:overlap=0.75,"
+          'aresample=16000,acrusher=bits=8:mode=log:aa=1,aresample=44100,'
           'adelay=40,apad=pad_dur=0.12,loudnorm=I=-14:TP=-1.5:LRA=7')
 
 def main():

@@ -19,6 +19,7 @@ SOURCES = {
     'ares_dark': ('documentacion/fighter-ares.png', 'dark'),
     'alba': ('documentacion/fighter-alba.png', 'pure'),
     'martin': ('documentacion/fighter-martin-optimo.png', 'pure'),
+    'selu': ('documentacion/fighter-selu.png', 'pure'),
 }
 
 # fila: (fuente, y0, y1, x0, x1, nframes, escala)
@@ -78,6 +79,27 @@ FIGHTERS = {
             'jumpkick': ('martin', 668, 815, 655, 1375, 6, 1.08),
             'hit':      ('martin', 838, 952, 15, 640, 6, 1.08),
             'ko':       ('martin', 850, 955, 650, 1375, 5, 1.08),
+        },
+    },
+    # Selu es un dúo y su lámina trae menos frames (7 idle/walk, 5 puñetazo, 5 patada en salto):
+    # 'order' reparte los que hay en las posiciones que usa el juego, sin inventar dibujos.
+    'selu': {
+        'portrait': ('selu', 17, 83, 261, 267),  # (x0, y0, x1, y1)
+        'rows': {
+            'idle':     ('selu', 40, 186, 465, 1160, 7, 1.0),
+            'walk':     ('selu', 230, 376, 465, 1165, 7, 1.0),
+            'punch':    ('selu', 548, 705, 8, 572, 5, 0.97),
+            'kick':     ('selu', 548, 705, 584, 1182, 6, 0.97),
+            'jump':     ('selu', 718, 905, 8, 572, 6, 0.97),
+            'jumpkick': ('selu', 718, 905, 584, 1182, 5, 0.97),
+            'hit':      ('selu', 918, 1072, 8, 572, 6, 0.97),
+            'ko':       ('selu', 918, 1076, 584, 1186, 5, 0.97),
+        },
+        'order': {
+            'idle': [0, 1, 2, 3, 3, 4, 5, 6],
+            'walk': [0, 1, 2, 3, 4, 5, 6, 6],
+            'punch': [0, 2, 1, 3, 1, 4],        # guardia, golpe, carga, golpe, retirada, guardia
+            'jumpkick': [0, 1, 2, 3, 1, 4],     # el 4 (caída) reutiliza el de despegue
         },
     },
 }
@@ -178,7 +200,10 @@ def extract(name, cfg, contact_dir=None):
     for anim, (src, y0, y1, x0, x1, n, scale) in cfg['rows'].items():
         im, mode = load(src)
         names = []
-        for fi, (rgba, ax) in enumerate(cut_frames(im[y0:y1, x0:x1], mode, n, f'{name}/{anim}')):
+        cut = cut_frames(im[y0:y1, x0:x1], mode, n, f'{name}/{anim}')
+        order = cfg.get('order', {}).get(anim, range(len(cut)))
+        for fi, src in enumerate(order):
+            rgba, ax = cut[src]
             frames_out.append((f'{anim}_{fi}', rgba, ax, scale))
             names.append(f'{anim}_{fi}')
         meta['anims'][anim] = names

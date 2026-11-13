@@ -10,10 +10,11 @@ const LINES: Line[] = [
   { kind: 'logo' },
   { kind: 'small', text: '© 2026 · HECHO EN CADIZ' },
   { kind: 'gap' },
-  { kind: 'head', text: 'IDEA Y DIRECCION' }, { kind: 'name', text: 'NANDOVEJER' },
+  { kind: 'head', text: 'UNA IDEA DE' }, { kind: 'name', text: 'NANDO MUÑOZ' },
+  { kind: 'small', text: 'SOYNANDO.COM' },
   { kind: 'gap' },
   { kind: 'head', text: 'PROGRAMACION' }, { kind: 'name', text: 'CLAUDE (ANTHROPIC)' },
-  { kind: 'small', text: 'CON LA DIRECCION DE NANDOVEJER' },
+  { kind: 'small', text: 'CON LA DIRECCION DE NANDO MUÑOZ' },
   { kind: 'gap' },
   { kind: 'head', text: 'REPARTO' },
   ...FIGHTER_IDS.map((id): Line => ({ kind: 'cast', id, text: FIGHTERS[id].name, sub: FIGHTERS[id].title })),
@@ -49,7 +50,7 @@ const LINES: Line[] = [
   { kind: 'small', text: 'QUE NOS QUITARON LAS MONEDAS' },
   { kind: 'gap' }, { kind: 'gap' },
   { kind: 'head', text: 'GRACIAS POR JUGAR' },
-  { kind: 'small', text: 'CADIZ · 2026' },
+  { kind: 'small', text: 'CADIZ · 2026 · SOYNANDO.COM' },
 ];
 const H: Record<Line['kind'], number> = { logo: 70, head: 22, name: 15, small: 11, gap: 20, cast: 30 };
 const SPEED = 0.55;
