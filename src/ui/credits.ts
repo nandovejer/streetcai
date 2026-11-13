@@ -4,7 +4,8 @@ import { VH, VW } from '../game/data';
 import { Renderer } from '../render/renderer';
 
 export const MAX_CREDITS = 9;
-let credits = 0;
+/** Se empieza con 1 crédito de regalo al cargar. */
+let credits = 1;
 /** Frames de destello al añadir un crédito o al intentar jugar sin créditos. */
 let addedT = 0, deniedT = 0;
 
