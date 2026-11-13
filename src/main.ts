@@ -5,13 +5,13 @@ import { loadAssets } from './engine/assets';
 import { AudioManager } from './engine/audio';
 import { InputManager } from './engine/input';
 import { AI } from './game/ai';
-import { Difficulty, FIGHTERS, VH, VW } from './game/data';
+import { Difficulty, FIGHTERS, FIGHTER_IDS, FighterId, STAGE_IDS, StageId, VH, VW } from './game/data';
 import { Match } from './game/match';
 import { Renderer } from './render/renderer';
-import { CONTINUE_FROM, CONTINUE_SECOND, Settings, continueButtons, drawContinue, drawPause, drawResult, drawSelect, drawTitle, hitButton, pauseButtons, resultButtons, selectButtons } from './ui/screens';
+import { CONTINUE_FROM, CONTINUE_SECOND, STAGE_CHOICES, Settings, VERSUS_FRAMES, continueButtons, drawContinue, drawPause, drawResult, drawSelect, drawTitle, drawVersus, hitButton, pauseButtons, resultButtons, selectButtons } from './ui/screens';
 import { isTouchDevice, setupTouch } from './ui/touch';
 
-type Screen = 'title' | 'select' | 'fight' | 'result' | 'continue';
+type Screen = 'title' | 'select' | 'versus' | 'fight' | 'result' | 'continue';
 
 async function boot() {
   const canvas = document.getElementById('game') as HTMLCanvasElement;
@@ -21,7 +21,7 @@ async function boot() {
   const touch = isTouchDevice() || params.has('touch');
 
   const [assets] = await Promise.all([
-    loadAssets(['chapa', 'ares']),
+    loadAssets([...FIGHTER_IDS]),
     document.fonts.load('10px "Press Start 2P"').catch(() => undefined),
   ]);
   loading.remove();
@@ -29,7 +29,22 @@ async function boot() {
   const r = new Renderer(canvas, assets);
   const input = new InputManager();
   const audio = new AudioManager();
-  const settings: Settings = { char: 'chapa', difficulty: 1, twoPlayers: false };
+  const settings: Settings = { char: 'chapa', char2: 'ares', difficulty: 1, twoPlayers: false, pickTurn: 0, stage: 'random' };
+  let fightStage: StageId = 'plaza';
+  const pickStage = () => {
+    fightStage = settings.stage === 'random' ? STAGE_IDS[Math.floor(Math.random() * STAGE_IDS.length)] : settings.stage;
+  };
+  // Modo arcade (1P): rivales en orden aleatorio y combate actual.
+  let ladder: FighterId[] = [];
+  let stage = 0;
+  let vsT = 0;
+  let vsFrozen = false;
+  const newLadder = () => {
+    ladder = FIGHTER_IDS.filter((id) => id !== settings.char);
+    for (let i = ladder.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ladder[i], ladder[j]] = [ladder[j], ladder[i]]; }
+    stage = 0;
+  };
+  const rivalId = (): FighterId => (settings.twoPlayers ? settings.char2 : ladder[stage]);
   let screen: Screen = 'title';
   let match: Match | null = null;
   let ai: AI | null = null;
@@ -46,9 +61,17 @@ async function boot() {
     audio.startMusic();
   };
 
+  /** Presentación VS y después el combate. */
+  const goVersus = () => {
+    if (!settings.twoPlayers && ladder.length === 0) newLadder();
+    pickStage();
+    vsT = 0;
+    setScreen('versus');
+    audio.play('start');
+    audio.say(`${FIGHTERS[settings.char].name.toLowerCase()} contra ${FIGHTERS[rivalId()].name.toLowerCase()}`);
+  };
   const startFight = () => {
-    const other = settings.char === 'chapa' ? 'ares' : 'chapa';
-    match = new Match(FIGHTERS[settings.char], FIGHTERS[other]);
+    match = new Match(FIGHTERS[settings.char], FIGHTERS[rivalId()]);
     ai = settings.twoPlayers ? null : new AI(settings.difficulty);
     paused = false; endT = 0;
     r.resetFight();
@@ -56,19 +79,39 @@ async function boot() {
     setScreen('fight');
   };
 
+  /** Elegir luchador. En 2 jugadores no se permite el mismo para ambos: si coinciden, se intercambian. */
+  const pick = (id: FighterId, who: 0 | 1 = settings.twoPlayers ? settings.pickTurn : 0) => {
+    if (!settings.twoPlayers) { settings.char = id; return; }
+    if (who === 0) { if (id === settings.char2) settings.char2 = settings.char; settings.char = id; }
+    else { if (id === settings.char) settings.char = settings.char2; settings.char2 = id; }
+    settings.pickTurn = who === 0 ? 1 : 0;
+  };
+  /** Mover el cursor de un jugador por la fila de retratos (salta el del otro jugador). */
+  const moveCursor = (who: 0 | 1, dir: number) => {
+    const cur = who === 0 ? settings.char : settings.char2, other = who === 0 ? settings.char2 : settings.char;
+    let i = FIGHTER_IDS.indexOf(cur);
+    do i = (i + dir + FIGHTER_IDS.length) % FIGHTER_IDS.length; while (settings.twoPlayers && FIGHTER_IDS[i] === other);
+    if (who === 0) settings.char = FIGHTER_IDS[i]; else settings.char2 = FIGHTER_IDS[i];
+    audio.play('select');
+  };
+
   const act = (a: string | null) => {
     if (!a) return;
     audio.init();
-    if (a.startsWith('char:')) { settings.char = a.slice(5) as Settings['char']; audio.play('select'); }
+    if (a.startsWith('char:')) { pick(a.slice(5) as FighterId); audio.play('select'); }
     else if (a.startsWith('diff:')) { settings.difficulty = Number(a.slice(5)) as Difficulty; settings.twoPlayers = false; audio.play('select'); }
+    else if (a.startsWith('stage:')) { settings.stage = a.slice(6) as Settings['stage']; audio.play('select'); }
     else if (a === 'mode:cpu') { settings.twoPlayers = false; audio.play('select'); }
     else if (a === 'mode:2p') { settings.twoPlayers = true; audio.play('select'); }
-    else if (a === 'fight' || a === 'rematch') startFight();
+    else if (a === 'fight') { ladder = []; goVersus(); }
+    else if (a === 'arcade:next') { if (stage < ladder.length - 1) { stage++; goVersus(); } }
+    else if (a === 'arcade:again') { ladder = []; goVersus(); }
+    else if (a === 'skip') { if (screen === 'versus' && vsT > 20) startFight(); }
     else if (a === 'menu') { paused = false; audio.play('select'); setScreen('select'); }
     else if (a === 'resume') paused = false;
     else if (a === 'pause') { if (screen === 'fight' && match && match.phase !== 'matchEnd') paused = !paused; }
     else if (a === 'title') { audio.play('start'); setScreen('select'); }
-    else if (a === 'continue:yes') { if (overT < 0 && contT > 20) startFight(); }
+    else if (a === 'continue:yes') { if (overT < 0 && contT > 20) goVersus(); }
     else if (a === 'continue:no') { if (overT < 0) gameOver(); else if (overT > 60) setScreen('title'); }
   };
 
@@ -78,7 +121,8 @@ async function boot() {
     const x = ((e.clientX - b.left) / b.width) * VW, y = ((e.clientY - b.top) / b.height) * VH;
     if (screen === 'title') act('title');
     else if (screen === 'select') act(hitButton(selectButtons(settings), x, y));
-    else if (screen === 'result') act(hitButton(resultButtons(), x, y));
+    else if (screen === 'result') act(hitButton(resultButtons(stage >= ladder.length - 1), x, y));
+    else if (screen === 'versus') act('skip');
     else if (screen === 'fight' && paused) act(hitButton(pauseButtons(), x, y));
     else if (screen === 'continue') act(overT >= 0 ? 'continue:no' : touch ? hitButton(continueButtons(), x, y) : 'continue:yes');
     else audio.init();
@@ -92,14 +136,20 @@ async function boot() {
     if (k === 'F2') { r.debug = !r.debug; e.preventDefault(); return; }
     if (screen === 'title') { if (k === 'Enter' || k === 'Space') act('title'); }
     else if (screen === 'select') {
-      if (k === 'ArrowLeft' || k === 'KeyA') act('char:chapa');
-      else if (k === 'ArrowRight' || k === 'KeyD') act('char:ares');
-      else if (k === 'ArrowUp' || k === 'KeyW') act('diff:' + Math.max(0, settings.difficulty - 1));
-      else if (k === 'ArrowDown' || k === 'KeyS') act('diff:' + Math.min(2, settings.difficulty + 1));
+      const two = settings.twoPlayers;
+      if (k === 'KeyA' || (!two && k === 'ArrowLeft')) moveCursor(0, -1);
+      else if (k === 'KeyD' || (!two && k === 'ArrowRight')) moveCursor(0, 1);
+      else if (two && k === 'ArrowLeft') moveCursor(1, -1);
+      else if (two && k === 'ArrowRight') moveCursor(1, 1);
+      else if (!two && (k === 'ArrowUp' || k === 'KeyW')) act('diff:' + Math.max(0, settings.difficulty - 1));
+      else if (!two && (k === 'ArrowDown' || k === 'KeyS')) act('diff:' + Math.min(2, settings.difficulty + 1));
+      else if (k === 'KeyE') act('stage:' + STAGE_CHOICES[(STAGE_CHOICES.indexOf(settings.stage) + 1) % STAGE_CHOICES.length]);
       else if (k === 'Digit2') act('mode:2p');
       else if (k === 'Digit1') act('mode:cpu');
       else if (k === 'Enter' || k === 'Space') act('fight');
       else if (k === 'Escape') setScreen('title');
+    } else if (screen === 'versus') {
+      if (k === 'Enter' || k === 'Space' || k === 'Escape') act('skip');
     } else if (screen === 'fight') {
       if (k === 'Escape' || k === 'KeyP') act('pause');
       else if (paused && k === 'Enter') act('resume');
@@ -108,7 +158,7 @@ async function boot() {
       if (k === 'Escape') act('continue:no');
       else if (k === 'Enter' || k === 'Space') act(overT >= 0 ? 'continue:no' : 'continue:yes');
     } else if (screen === 'result') {
-      if (k === 'Enter' || k === 'Space') act('rematch');
+      if (k === 'Enter' || k === 'Space') act(stage >= ladder.length - 1 ? 'arcade:again' : 'arcade:next');
       else if (k === 'Escape') act('menu');
     }
   });
@@ -209,6 +259,7 @@ async function boot() {
   };
 
   const draw = () => {
+    r.stage = screen === 'versus' || screen === 'fight' || screen === 'result' ? fightStage : 'plaza';
     if (screen === 'title') drawTitle(r, touch);
     else if (screen === 'select') drawSelect(r, settings, touch);
     else if (screen === 'fight' && match) {
@@ -216,31 +267,56 @@ async function boot() {
       r.drawFight(match, [you, other]);
       if (paused) drawPause(r);
     } else if (screen === 'continue' && match) {
-      drawContinue(r, match.f[1 - match.matchWinner].def.id as 'chapa' | 'ares', contT, overT, touch);
+      drawContinue(r, match.f[1 - match.matchWinner].def.id, contT, overT, touch);
+    } else if (screen === 'versus') {
+      const sub = settings.twoPlayers ? 'J1  VS  J2' : `RIVAL ${stage + 1} DE ${ladder.length}`;
+      drawVersus(r, settings.char, rivalId(), vsT, sub, fightStage);
     } else if (screen === 'result' && match) {
       const w = match.matchWinner, win = match.f[w].def.id, lose = match.f[1 - w].def.id;
-      const head = settings.twoPlayers ? `GANA J${w + 1}` : w === 0 ? '¡HAS GANADO!' : 'HAS PERDIDO';
-      drawResult(r, win, lose, head, `${match.f[0].wins} - ${match.f[1].wins}`);
+      const final = stage >= ladder.length - 1;
+      const head = settings.twoPlayers ? `GANA J${w + 1}` : final ? '¡CAMPEON!' : '¡HAS GANADO!';
+      const score = final ? `${ladder.length} DE ${ladder.length} RIVALES VENCIDOS` : `${match.f[0].wins} - ${match.f[1].wins}   ·   RIVAL ${stage + 1} DE ${ladder.length}`;
+      drawResult(r, win, lose, head, score, final);
     }
   };
 
+  const sp = params.get('stage') as StageId;
+  if (STAGE_IDS.includes(sp)) settings.stage = sp;
   // Modo demo para pruebas automáticas: ?demo=1 lanza IA contra IA; ?ff=N avanza N frames.
   if (params.has('demo')) {
-    settings.difficulty = 2; if (params.get('demo') === 'ares') settings.char = 'ares';
-    startFight(); demoAi = new AI(2);
+    settings.difficulty = 2;
+    const dc = params.get('demo') as FighterId;
+    if (FIGHTER_IDS.includes(dc)) settings.char = dc;
+    newLadder();
+    const vs = params.get('vs') as FighterId;
+    if (FIGHTER_IDS.includes(vs) && vs !== settings.char) ladder = [vs];
+    pickStage(); startFight(); demoAi = new AI(2);
     const ff = Number(params.get('ff') || 0);
     for (let i = 0; i < ff; i++) {
       stepFight(); if (i % 2 === 0) draw();
       if (params.has('untilSuper') && match!.superFreeze > 0 && match!.superFreeze < 30) { paused = true; break; }
     }
   } else if (params.get('screen') === 'continue') {
-    // Pruebas: ?screen=continue&lose=ares|chapa abre directamente la cuenta atrás.
-    const lose = params.get('lose') === 'ares' ? 'ares' : 'chapa';
+    // Pruebas: ?screen=continue&lose=<luchador> abre directamente la cuenta atrás.
+    const lp = params.get('lose') as FighterId;
+    const lose: FighterId = FIGHTER_IDS.includes(lp) ? lp : 'chapa';
     settings.char = lose;
-    match = new Match(FIGHTERS[lose], FIGHTERS[lose === 'chapa' ? 'ares' : 'chapa']);
+    newLadder();
+    match = new Match(FIGHTERS[lose], FIGHTERS[ladder[0]]);
     match.matchWinner = 1;
     startContinue();
-  } else if (params.has('screen')) setScreen(params.get('screen') as Screen);
+  } else if (params.get('screen') === 'versus') {
+    // Pruebas: ?screen=versus[&vst=60] (vst congela la animación en ese frame)
+    if (params.has('2p')) settings.twoPlayers = true;
+    newLadder(); goVersus();
+    if (params.has('vst')) { vsT = Number(params.get('vst')); vsFrozen = true; }
+  } else if (params.get('screen') === 'result') {
+    // Pruebas: ?screen=result[&final=1]
+    newLadder(); if (params.has('final')) stage = ladder.length - 1;
+    match = new Match(FIGHTERS[settings.char], FIGHTERS[ladder[stage]]);
+    match.matchWinner = 0; match.f[0].wins = 2;
+    setScreen('result');
+  } else if (params.has('screen')) { if (params.has('2p')) settings.twoPlayers = true; setScreen(params.get('screen') as Screen); }
   else setScreen('title');
   if (params.has('debug')) r.debug = true;
 
@@ -254,6 +330,7 @@ async function boot() {
       acc -= STEP;
       if (screen === 'fight' && !paused) stepFight();
       else if (screen === 'continue') stepContinue();
+      else if (screen === 'versus' && !vsFrozen && ++vsT >= VERSUS_FRAMES) startFight();
     }
     draw();
     requestAnimationFrame(loop);

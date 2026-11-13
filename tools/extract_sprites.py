@@ -5,6 +5,8 @@ Requiere: pillow, numpy, scipy.
 Dos tipos de lámina:
   - 'chroma': fondo verde croma (preferida, mejor recorte).
   - 'dark':   fondo azul oscuro (láminas originales).
+  - 'pure':   croma verde puro (~0,250,0) con verde derramado sobre el personaje
+              (Alba, Martín): recorte estricto + despill de todo el cuerpo.
 """
 import json, sys
 from PIL import Image
@@ -15,6 +17,8 @@ SOURCES = {
     'ares_chroma': ('documentacion/fighter-ares-chroma.png', 'chroma'),
     'chapa_chroma': ('documentacion/fighter-chapa-chroma.png', 'chroma'),
     'ares_dark': ('documentacion/fighter-ares.png', 'dark'),
+    'alba': ('documentacion/fighter-alba.png', 'pure'),
+    'martin': ('documentacion/fighter-martin.png', 'pure'),
 }
 
 # fila: (fuente, y0, y1, x0, x1, nframes, escala)
@@ -48,6 +52,32 @@ FIGHTERS = {
             'ko':       ('chapa_chroma', 850, 960, 650, 1370, 5, 1.12),
         },
     },
+    'alba': {
+        'portrait': ('alba', 15, 80, 258, 276),  # (x0, y0, x1, y1)
+        'rows': {
+            'idle':     ('alba', 36, 190, 530, 1310, 8, 0.93),
+            'walk':     ('alba', 238, 396, 530, 1325, 8, 0.93),
+            'punch':    ('alba', 518, 652, 15, 645, 6, 1.04),
+            'kick':     ('alba', 518, 652, 655, 1350, 6, 1.04),
+            'jump':     ('alba', 660, 815, 15, 645, 6, 1.04),
+            'jumpkick': ('alba', 668, 815, 655, 1375, 6, 1.04),
+            'hit':      ('alba', 842, 958, 15, 645, 6, 1.04),
+            'ko':       ('alba', 842, 958, 655, 1375, 5, 1.04),
+        },
+    },
+    'martin': {
+        'portrait': ('martin', 22, 92, 224, 282),  # (x0, y0, x1, y1)
+        'rows': {
+            'idle':     ('martin', 46, 182, 530, 1305, 8, 1.06),
+            'walk':     ('martin', 246, 392, 530, 1305, 8, 1.06),
+            'punch':    ('martin', 540, 662, 20, 640, 6, 1.13),
+            'kick':     ('martin', 540, 662, 650, 1345, 6, 1.13),
+            'jump':     ('martin', 670, 822, 20, 640, 6, 1.13),
+            'jumpkick': ('martin', 690, 822, 650, 1370, 6, 1.13),
+            'hit':      ('martin', 856, 962, 20, 640, 6, 1.13),
+            'ko':       ('martin', 856, 962, 650, 1370, 5, 1.13),
+        },
+    },
 }
 
 _cache = {}
@@ -57,15 +87,31 @@ def load(src):
         _cache[src] = (np.array(Image.open(path).convert('RGB')).astype(np.int32), mode)
     return _cache[src]
 
-def green(reg):
+def green(reg, mode='chroma'):
     r, g, b = reg[..., 0], reg[..., 1], reg[..., 2]
+    if mode == 'pure':
+        # verde puro y también la sombra verde oscura que la lámina pinta bajo los pies
+        return (g > 60) & (g > 1.6 * np.maximum(r, b) + 30)
     return (g > r + 30) & (g > b + 30)
+
+def despill(sub, mask):
+    """Quita el verde derramado. Los píxeles con G dominante se recolorean a un tono cálido
+    con la misma luminosidad (en estos personajes la zona manchada es piel, camisa o cuero)."""
+    r, g, b = sub[..., 0].astype(float), sub[..., 1].astype(float), sub[..., 2].astype(float)
+    over = mask & (g > np.maximum(r, b) + 2)
+    lum = 0.3 * r + 0.59 * g + 0.11 * b
+    warm = np.stack([lum * 1.14, lum * 0.96, lum * 0.8], axis=-1)
+    # mezcla progresiva: cuanto más verde, más se recolorea
+    k = np.clip((g - np.maximum(r, b)) / 12.0, 0, 1)[..., None]
+    mixed = sub.astype(float) * (1 - k) + warm * k
+    mixed[..., 1] = np.minimum(mixed[..., 1], np.maximum(mixed[..., 0], mixed[..., 2]) + 4)
+    sub[over] = np.clip(mixed[over], 0, 255).astype(sub.dtype)
 
 def cut_frames(reg, mode, n, tag):
     """Devuelve lista de (rgba, ancla_x) ordenada de izquierda a derecha."""
     r, g, b = reg[..., 0], reg[..., 1], reg[..., 2]
-    if mode == 'chroma':
-        fg = ~green(reg)
+    if mode in ('chroma', 'pure'):
+        fg = ~green(reg, mode)
     else:
         fg = (reg.max(axis=2) > 44) | (b > 37)
     lab, k = ndi.label(ndi.binary_dilation(fg, iterations=2))
@@ -78,6 +124,19 @@ def cut_frames(reg, mode, n, tag):
     out = []
     for bi in bodies:
         m = (lab == bi + 1) & fg
+        if mode == 'pure':
+            # quedarse con el cuerpo: fuera letras de los rótulos y chispas sueltas
+            l2, k2 = ndi.label(m, structure=np.ones((3, 3)))
+            if k2 > 1:
+                a2 = ndi.sum(m, l2, range(1, k2 + 1))
+                main = int(np.argmax(a2)) + 1
+                sl = ndi.find_objects(l2)[main - 1]
+                keep = [main]
+                for i in range(1, k2 + 1):
+                    if i == main or a2[i - 1] < 8: continue
+                    cy, cx = ndi.center_of_mass(l2 == i)
+                    if sl[0].start + 4 <= cy <= sl[0].stop and sl[1].start - 2 <= cx <= sl[1].stop + 2: keep.append(i)
+                m = np.isin(l2, keep)
         if mode == 'dark':
             m = ndi.binary_fill_holes(m)
             outline = ndi.binary_dilation(m, iterations=1) & ~m
@@ -94,7 +153,9 @@ def cut_frames(reg, mode, n, tag):
         y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
         sub = reg[y0:y1, x0:x1].copy()
         mm = m[y0:y1, x0:x1]
-        if mode == 'chroma':
+        if mode == 'pure':
+            despill(sub, mm)
+        elif mode == 'chroma':
             edge = mm & ~ndi.binary_erosion(mm, iterations=2)
             spill = edge & (sub[..., 1] > np.maximum(sub[..., 0], sub[..., 2]))
             sub[spill, 1] = np.maximum(sub[..., 0], sub[..., 2])[spill]
@@ -136,7 +197,10 @@ def extract(name, cfg, contact_dir=None):
     src, px0, py0, px1, py1 = cfg['portrait']
     im, mode = load(src)
     reg = im[py0:py1, px0:px1]
-    alpha = np.where(green(reg), 0, 255).astype(np.uint8) if mode == 'chroma' else np.full(reg.shape[:2], 255, np.uint8)
+    alpha = np.where(green(reg, mode), 0, 255).astype(np.uint8) if mode in ('chroma', 'pure') else np.full(reg.shape[:2], 255, np.uint8)
+    reg = reg.copy()
+    if mode == 'pure':
+        despill(reg, alpha > 0)
     rgb = reg.astype(np.uint8); rgb[alpha == 0] = 0
     Image.fromarray(np.dstack([rgb, alpha]), 'RGBA').save(f'{out}/portrait.png')
     if contact_dir:
@@ -156,6 +220,16 @@ if __name__ == '__main__':
     cd = sys.argv[1] if len(sys.argv) > 1 else None
     for n, c in FIGHTERS.items():
         extract(n, c, cd)
-    bg = Image.open('documentacion/bg-plaza-flores.png').convert('RGB').crop((0, 0, 1536, 872))
-    bg.save('public/assets/stages/plaza/bg.webp', quality=90, method=6)
-    print('bg ok', bg.size)
+    # Escenarios. El juego dibuja la parte inferior de la imagen a 720 px de ancho, así que el
+    # recorte decide qué queda a la vista: la Plaza pierde el HUD pintado en la lámina y la Caleta
+    # pierde arena del primer plano para que la cúpula del balneario entre en pantalla.
+    import os
+    STAGES = {
+        'plaza': ('documentacion/bg-plaza-flores.png', (0, 0, 1536, 872)),
+        'caleta': ('documentacion/bg-caleta.png', (0, 40, 1535, 912)),
+    }
+    for sid, (path, box) in STAGES.items():
+        os.makedirs(f'public/assets/stages/{sid}', exist_ok=True)
+        bg = Image.open(path).convert('RGB').crop(box)
+        bg.save(f'public/assets/stages/{sid}/bg.webp', quality=90, method=6)
+        print('bg', sid, bg.size)

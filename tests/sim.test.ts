@@ -1,5 +1,5 @@
 // Test de simulación headless: IA contra IA. Verifica que los combates terminan y que el estado es coherente.
-import { FIGHTERS, STAGE_W } from '../src/game/data';
+import { FIGHTERS, FIGHTER_IDS, FighterId, STAGE_W } from '../src/game/data';
 import { Match } from '../src/game/match';
 import { AI } from '../src/game/ai';
 import { emptyInput } from '../src/game/fighter';
@@ -9,8 +9,12 @@ const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 42
 let fails = 0;
 const check = (c: boolean, msg: string) => { if (!c) { fails++; console.error('FALLO:', msg); } };
 
-for (const [l0, l1] of [[2, 2], [0, 2], [1, 1], [2, 0]] as const) {
-  const m = new Match(FIGHTERS.chapa, FIGHTERS.ares);
+const PAIRS: [FighterId, FighterId][] = [];
+for (const a of FIGHTER_IDS) for (const b of FIGHTER_IDS) if (a !== b) PAIRS.push([a, b]);
+const LEVELS = [[2, 2], [0, 2], [1, 1], [2, 0]] as const;
+for (let pi = 0; pi < PAIRS.length; pi++) {
+  const [l0, l1] = LEVELS[pi % LEVELS.length];
+  const m = new Match(FIGHTERS[PAIRS[pi][0]], FIGHTERS[PAIRS[pi][1]]);
   const ais = [new AI(l0, rnd), new AI(l1, rnd)];
   let frames = 0, hits = 0, blocks = 0, kds = 0, projs = 0;
   while (m.phase !== 'matchEnd' && frames < 60 * 60 * 12) {
@@ -27,7 +31,7 @@ for (const [l0, l1] of [[2, 2], [0, 2], [1, 1], [2, 0]] as const) {
   }
   check(m.phase === 'matchEnd', `el combate no terminó (dif ${l0} vs ${l1})`);
   check(hits > 5, 'casi no hubo golpes');
-  console.log(`dif ${l0} vs ${l1}: gana ${m.matchWinner >= 0 ? m.f[m.matchWinner].def.name : '-'} (${m.f[0].wins}-${m.f[1].wins}) en ${(frames / 60).toFixed(0)}s, rondas=${m.round}, golpes=${hits}, bloqueos=${blocks}, derribos=${kds}, proyectiles=${projs}`);
+  console.log(`${PAIRS[pi][0]} vs ${PAIRS[pi][1]} (dif ${l0} vs ${l1}): gana ${m.matchWinner >= 0 ? m.f[m.matchWinner].def.name : '-'} (${m.f[0].wins}-${m.f[1].wins}) en ${(frames / 60).toFixed(0)}s, rondas=${m.round}, golpes=${hits}, bloqueos=${blocks}, derribos=${kds}, proyectiles=${projs}`);
 }
 
 // Un jugador pasivo debe perder, y el bloqueo debe reducir el daño

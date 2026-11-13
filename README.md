@@ -1,7 +1,14 @@
 # Street Cai
 
-Juego de lucha arcade 2D en el navegador (escritorio y móvil), ambientado en la Plaza de las Flores de Cádiz.
-Dos luchadores: **Chapa** (El Guerrero) y **Ares** (El Viajero).
+Juego de lucha arcade 2D en el navegador (escritorio y móvil), ambientado en Cádiz.
+
+- **Luchadores:** Chapa (El Guerrero), Ares (El Viajero), Alba (El Marinero) y Martín (El Veterano).
+- **Escenarios:** Plaza de las Flores y La Caleta (se elige en la selección, o al azar en cada combate).
+
+## Modos
+
+- **1P Arcade:** eliges luchador y te enfrentas a los otros tres en orden aleatorio, con pantalla de VS antes de cada combate. Si pierdes, CONTINUE repite el mismo rival; si ganas a los tres, eres campeón.
+- **2 jugadores:** cada uno elige su luchador (no puede repetirse) y combaten en el mismo teclado.
 
 ## Arrancar
 
@@ -11,7 +18,7 @@ npm run dev      # servidor en http://localhost:5173 y en la IP de la red local 
 npm run build    # typecheck + build estático en dist/
 npm run preview  # sirve dist/
 npm test         # simulación headless IA contra IA
-npx tsx tests/balance.ts   # estadística de equilibrio entre personajes
+npx tsx tests/balance.ts 40   # equilibrio todos contra todos (40 partidas por cruce)
 ```
 
 Para jugar en el móvil: mismo wifi, abrir `http://<IP-del-PC>:5173`. Se puede añadir a la pantalla de inicio (PWA).
@@ -29,9 +36,11 @@ Para jugar en el móvil: mismo wifi, abrir `http://<IP-del-PC>:5173`. Se puede a
 | Dash | Doble toque adelante / atrás | | | Doble toque |
 | Pausa | Esc / P | | | botón II |
 
+En la selección: A/D (o flechas en 1P) mueven el cursor del J1, las flechas el del J2 en modo 2 jugadores, arriba/abajo cambian la dificultad, `E` cambia el escenario y Enter empieza. Con ratón o táctil, en 2 jugadores cada toque en un retrato elige alternando J1 y J2.
+
 También hay soporte básico de mando (Gamepad API). `M` silencia en los menús, `F2` muestra hitboxes/hurtboxes.
 
-Parámetros de URL para pruebas: `?demo=1&ff=600` (IA contra IA avanzando 600 frames), `?debug=1` (cajas), `?touch=1` (fuerza controles táctiles), `?screen=select`.
+Parámetros de URL para pruebas: `?demo=alba&vs=martin&ff=600` (IA contra IA avanzando 600 frames), `?stage=caleta`, `?debug=1` (cajas), `?touch=1` (fuerza controles táctiles), `?screen=select&2p=1`, `?screen=versus&vst=80` (VS congelado), `?screen=result&final=1`, `?screen=continue&lose=martin`.
 
 ## Mecánicas
 
@@ -48,8 +57,9 @@ Parámetros de URL para pruebas: `?demo=1&ff=600` (IA contra IA avanzando 600 fr
 
 ```
 documentacion/            láminas originales y plan técnico
-tools/extract_sprites.py  recorta las láminas -> atlas transparente + JSON por luchador
-public/assets/            atlas, retratos y escenario generados
+tools/extract_sprites.py  recorta las láminas -> atlas transparente + JSON por luchador, y los fondos
+tools/extract_defeated.py retratos de derrota (pantalla de CONTINUE)
+public/assets/            atlas, retratos y escenarios generados
 src/game/                 simulación pura (sin DOM): data, fighter, match, ai
 src/engine/               assets, input (teclado/táctil/mando), audio sintetizado
 src/render/               renderer de combate y HUD
@@ -57,12 +67,14 @@ src/ui/                   pantallas de menú y controles táctiles
 tests/                    simulación IA vs IA
 ```
 
-Añadir un luchador: lámina nueva + entrada en `tools/extract_sprites.py` + entrada en `FIGHTERS` (`src/game/data.ts`).
+Añadir un luchador: lámina nueva + entrada en `tools/extract_sprites.py` y `tools/extract_defeated.py` + entrada en `FIGHTER_IDS`/`FIGHTERS` (`src/game/data.ts`). La selección, el título y el arcade se adaptan solos.
+
+Añadir un escenario: imagen en `documentacion/` + entrada en `STAGES` de `tools/extract_sprites.py` (con su recorte) + entrada en `STAGE_IDS`/`STAGES` (`src/game/data.ts`).
 
 ## Decisiones respecto al plan técnico
 
 - **Canvas 2D propio en lugar de Phaser**: menos peso en móvil, simulación determinista a 60 Hz testeable en Node y cero dependencias de runtime. La arquitectura (escenas, luchador, combate, sistemas, UI) sigue la del plan.
-- **Sprites recortados de las láminas**: el plan pedía no usar las láminas como spritesheet, pero son el único arte disponible. Se recortan frame a frame con transparencia real, ancla en los pies y escala normalizada. Chapa sale entero de la lámina con croma verde (`fighter-chapa-chroma.png`). De la lámina croma de Ares solo se usan idle, walk y el retrato: en el resto de filas el personaje lleva otra ropa, así que esas siguen saliendo de la lámina original.
+- **Sprites recortados de las láminas**: el plan pedía no usar las láminas como spritesheet, pero son el único arte disponible. Se recortan frame a frame con transparencia real, ancla en los pies y escala normalizada. Chapa sale entero de la lámina con croma verde (`fighter-chapa-chroma.png`). De la lámina croma de Ares solo se usan idle, walk y el retrato: en el resto de filas el personaje lleva otra ropa, así que esas siguen saliendo de la lámina original. Las láminas de Alba y Martín tienen verde derramado sobre el personaje: se recortan con un modo más estricto que además quita la sombra pintada bajo los pies y recolorea a tono cálido los píxeles manchados de verde (cara y camisa de Martín). Algunos frames de Martín siguen con el chaleco algo amarillento porque así vienen pintados en la lámina.
 
 ## Recursos gráficos pendientes
 

@@ -1,4 +1,5 @@
-// Carga de recursos gráficos (atlas por luchador, retratos y escenario).
+// Carga de recursos gráficos (atlas por luchador, retratos y escenarios).
+import { STAGE_IDS, StageId } from '../game/data';
 export interface AtlasFrame { x: number; y: number; w: number; h: number; ax: number; s: number }
 export interface Atlas { img: HTMLImageElement; frames: Record<string, AtlasFrame>; anims: Record<string, string[]> }
 export interface Assets {
@@ -6,7 +7,7 @@ export interface Assets {
   portrait: Record<string, HTMLImageElement>;
   /** Retrato de derrota para la pantalla de CONTINUE. */
   defeated: Record<string, HTMLImageElement>;
-  bg: HTMLImageElement;
+  stages: Record<StageId, HTMLImageElement>;
 }
 
 const base = import.meta.env.BASE_URL;
@@ -21,7 +22,8 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 export async function loadAssets(ids: string[]): Promise<Assets> {
-  const out: Assets = { atlas: {}, portrait: {}, defeated: {}, bg: await loadImage(`${base}assets/stages/plaza/bg.webp`) };
+  const out: Assets = { atlas: {}, portrait: {}, defeated: {}, stages: {} as Record<StageId, HTMLImageElement> };
+  await Promise.all(STAGE_IDS.map(async (sid) => { out.stages[sid] = await loadImage(`${base}assets/stages/${sid}/bg.webp`); }));
   await Promise.all(ids.map(async (id) => {
     const dir = `${base}assets/fighters/${id}/`;
     const [img, meta, portrait, defeated] = await Promise.all([

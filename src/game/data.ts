@@ -64,8 +64,12 @@ const BASE_MOVES: Record<MoveId, MoveData> = {
   },
 };
 
+/** Luchadores disponibles, en el orden en que aparecen en la selección. */
+export const FIGHTER_IDS = ['chapa', 'ares', 'alba', 'martin'] as const;
+export type FighterId = (typeof FIGHTER_IDS)[number];
+
 export interface FighterDef {
-  id: 'chapa' | 'ares';
+  id: FighterId;
   name: string;
   title: string;
   maxHp: number;
@@ -93,7 +97,7 @@ function scaleMoves(frameMult: number, reach: number): Record<MoveId, MoveData> 
   return out;
 }
 
-export const FIGHTERS: Record<'chapa' | 'ares', FighterDef> = {
+export const FIGHTERS: Record<FighterId, FighterDef> = {
   chapa: {
     id: 'chapa', name: 'CHAPA', title: 'EL GUERRERO', maxHp: 150, walk: 2.0, jumpV: 10.6, jumpVx: 2.5, power: 1.06,
     specialName: 'CHAPAZO', proj: { speed: 4.2, damage: 12, core: '#ffe9a0', glow: '#ff7a1a', size: 17 },
@@ -104,6 +108,26 @@ export const FIGHTERS: Record<'chapa' | 'ares', FighterDef> = {
     specialName: 'LEVANTERA', proj: { speed: 6.2, damage: 10, core: '#e6fff9', glow: '#19c7b0', size: 13 },
     stats: { fuerza: 3, velocidad: 4, tecnica: 5, aguante: 3 }, moves: scaleMoves(0.88, 1.0),
   },
+  // Boxeador veterano: lento pero muy duro de tumbar, golpes cortos y pesados.
+  alba: {
+    id: 'alba', name: 'ALBA', title: 'EL MARINERO', maxHp: 150, walk: 2.1, jumpV: 10.2, jumpVx: 2.4, power: 1.08,
+    specialName: 'MAREJADA', proj: { speed: 4.8, damage: 12, core: '#eaf7ff', glow: '#2f7de0', size: 15 },
+    stats: { fuerza: 3, velocidad: 2, tecnica: 3, aguante: 4 }, moves: scaleMoves(1.1, 0.94),
+  },
+  // Luchador callejero experimentado: equilibrado y rápido de piernas.
+  martin: {
+    id: 'martin', name: 'MARTIN', title: 'EL VETERANO', maxHp: 136, walk: 2.5, jumpV: 10.9, jumpVx: 2.9, power: 1.0,
+    specialName: 'SOMBRERAZO', proj: { speed: 5.4, damage: 11, core: '#ffe9b8', glow: '#b06a2a', size: 14 },
+    stats: { fuerza: 3, velocidad: 4, tecnica: 4, aguante: 4 }, moves: scaleMoves(0.95, 1.0),
+  },
+};
+
+/** Escenarios: imagen en public/assets/stages/<id>/bg.webp. */
+export const STAGE_IDS = ['plaza', 'caleta'] as const;
+export type StageId = (typeof STAGE_IDS)[number];
+export const STAGES: Record<StageId, { name: string; short: string; ambient: 'petals' | 'gulls' }> = {
+  plaza: { name: 'PLAZA DE LAS FLORES', short: 'PLAZA', ambient: 'petals' },
+  caleta: { name: 'LA CALETA', short: 'CALETA', ambient: 'gulls' },
 };
 
 export type Difficulty = 0 | 1 | 2;

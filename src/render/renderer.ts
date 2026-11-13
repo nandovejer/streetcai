@@ -1,11 +1,12 @@
 // Render del combate: escenario, luchadores, efectos y HUD. Solo lee el estado del Match.
 import { Assets } from '../engine/assets';
-import { GROUND_Y, ROUNDS_TO_WIN, SPRITE_SCALE, STAGE_W, VH, VW } from '../game/data';
+import { GROUND_Y, ROUNDS_TO_WIN, SPRITE_SCALE, STAGES, STAGE_W, StageId, VH, VW } from '../game/data';
 import { Fighter, GameEvent } from '../game/fighter';
 import { Match } from '../game/match';
 
 interface Particle { x: number; y: number; vx: number; vy: number; life: number; max: number; kind: 'spark' | 'dust' | 'flash' | 'ring'; color: string; size: number }
 interface Petal { x: number; y: number; vx: number; vy: number; ph: number; color: string }
+interface Gull { x: number; y: number; vx: number; ph: number; size: number }
 
 export const FONT = '"Press Start 2P", monospace';
 export const SCALE = 2;
@@ -14,6 +15,9 @@ export class Renderer {
   ctx: CanvasRenderingContext2D;
   private parts: Particle[] = [];
   private petals: Petal[] = [];
+  private gulls: Gull[] = [];
+  /** Escenario que se dibuja de fondo (los menús usan la Plaza). */
+  stage: StageId = 'plaza';
   private tint: HTMLCanvasElement;
   private tctx: CanvasRenderingContext2D;
   private shownHp = [1, 1];
@@ -56,12 +60,32 @@ export class Renderer {
   }
 
   drawStage(camX: number, dim = 0) {
-    const c = this.ctx, bg = this.assets.bg;
+    const c = this.ctx, bg = this.assets.stages[this.stage];
     const s = STAGE_W / bg.width, h = bg.height * s;
     c.imageSmoothingEnabled = true;
     c.drawImage(bg, -camX - 4, VH - h, STAGE_W + 8, h + 4);
     c.imageSmoothingEnabled = false;
     if (dim > 0) { c.fillStyle = `rgba(6,8,24,${dim})`; c.fillRect(-10, -10, VW + 20, VH + 20); }
+  }
+
+  /** Ambiente del escenario: pétalos en la Plaza, gaviotas en la Caleta. */
+  drawAmbient() {
+    if (STAGES[this.stage].ambient === 'gulls') this.drawGulls(); else this.drawPetals();
+  }
+
+  private drawGulls() {
+    const c = this.ctx;
+    if (!this.gulls.length) {
+      for (let i = 0; i < 5; i++) this.gulls.push({ x: Math.random() * VW, y: 70 + Math.random() * 70, vx: 0.25 + Math.random() * 0.35, ph: Math.random() * 6, size: 3 + Math.random() * 2.5 });
+    }
+    c.strokeStyle = '#f4f6fa'; c.lineWidth = 1.2;
+    for (const g of this.gulls) {
+      g.ph += 0.09; g.x += g.vx; g.y += Math.sin(g.ph * 0.3) * 0.15;
+      if (g.x > VW + 12) { g.x = -12; g.y = 70 + Math.random() * 70; }
+      const flap = Math.sin(g.ph) * g.size * 0.55, x = Math.round(g.x), y = Math.round(g.y);
+      c.beginPath(); c.moveTo(x - g.size, y - flap); c.quadraticCurveTo(x - g.size / 2, y - g.size * 0.5, x, y);
+      c.quadraticCurveTo(x + g.size / 2, y - g.size * 0.5, x + g.size, y - flap); c.stroke();
+    }
   }
 
   drawPetals() {
@@ -310,7 +334,7 @@ export class Renderer {
       }
       c.globalAlpha = 1;
     }
-    this.drawPetals();
+    this.drawAmbient();
     // el que ataca se dibuja encima
     const order = m.f[0].attacking && !m.f[1].attacking ? [1, 0] : [0, 1];
     for (const i of order) this.drawFighter(m.f[i], m);

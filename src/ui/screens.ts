@@ -1,11 +1,22 @@
 // Pantallas de menú dibujadas en el canvas: título, selección y resultado.
-import { DIFFICULTY_NAMES, Difficulty, FIGHTERS, GROUND_Y, VH, VW } from '../game/data';
+import { DIFFICULTY_NAMES, Difficulty, FIGHTERS, FIGHTER_IDS, FighterId, GROUND_Y, STAGES, STAGE_IDS, StageId, VH, VW } from '../game/data';
 import { Renderer } from '../render/renderer';
 
-export interface Settings { char: 'chapa' | 'ares'; difficulty: Difficulty; twoPlayers: boolean }
+export interface Settings {
+  /** Luchador del J1 y del J2 (el J2 solo se usa en modo 2 jugadores). */
+  char: FighterId; char2: FighterId;
+  difficulty: Difficulty; twoPlayers: boolean;
+  /** En 2 jugadores con ratón/táctil: a quién asigna el siguiente toque en un retrato. */
+  pickTurn: 0 | 1;
+  /** Escenario elegido, o al azar en cada combate. */
+  stage: StageId | 'random';
+}
+export const STAGE_CHOICES: (StageId | 'random')[] = [...STAGE_IDS, 'random'];
 export interface Button { x: number; y: number; w: number; h: number; label: string; action: string; on?: boolean }
 
-const IDS = ['chapa', 'ares'] as const;
+const COL_J1 = '#ffd800', COL_J2 = '#3cb8ff';
+/** Color de acento por luchador (nombres en título y VS). */
+const ACCENT: Record<FighterId, string> = { chapa: '#ffb400', ares: '#3cb8ff', alba: '#e8eef8', martin: '#d8955a' };
 
 export function drawTitle(r: Renderer, touch: boolean) {
   r.time++;
@@ -13,27 +24,31 @@ export function drawTitle(r: Renderer, touch: boolean) {
   r.drawStage(40, 0.35);
   r.drawPetals();
   const t = r.time;
-  r.drawShadow(190, 50, 8, 0.7);
-  r.drawShadow(450, 50, 8, 0.7);
-  r.drawSprite('chapa', `idle_${Math.floor(t / 7) % 8}`, 190, GROUND_Y, 1, 1.25);
-  r.drawSprite('ares', `idle_${Math.floor(t / 7) % 8}`, 450, GROUND_Y, -1, 1.25);
+  const XS = [70, 192, 448, 570];
+  FIGHTER_IDS.forEach((id, i) => {
+    r.drawShadow(XS[i], 44, 7, 0.7);
+    r.drawSprite(id, `idle_${Math.floor(t / 7 + i * 2) % 8}`, XS[i], GROUND_Y, i < 2 ? 1 : -1, 1.12);
+  });
   const bob = Math.sin(t * 0.05) * 3;
   r.bigText('STREET', VW / 2, 70 + bob, 46);
   r.bigText('CAI', VW / 2, 124 + bob, 58);
   r.text('PLAZA DE LAS FLORES · CADIZ', VW / 2, 166, 8, '#fff');
   r.text('VS', VW / 2, 250, 20, '#ff3b1f');
   if (Math.floor(t / 30) % 2 === 0) r.text(touch ? 'TOCA PARA EMPEZAR' : 'PULSA ENTER PARA EMPEZAR', VW / 2, 300, 10, '#ffd800');
-  r.text('CHAPA', 190, 346, 8, '#ffb400');
-  r.text('ARES', 450, 346, 8, '#3cb8ff');
+  FIGHTER_IDS.forEach((id, i) => r.text(FIGHTERS[id].name, XS[i], 346, 8, ACCENT[id]));
 }
+
+const CARD = 86, CARD_GAP = 16, CARD_Y = 40;
+const cardX = (i: number) => (VW - (FIGHTER_IDS.length * CARD + (FIGHTER_IDS.length - 1) * CARD_GAP)) / 2 + i * (CARD + CARD_GAP);
 
 export function selectButtons(s: Settings): Button[] {
   const b: Button[] = [];
-  IDS.forEach((id, i) => b.push({ x: 150 + i * 220, y: 44, w: 120, h: 120, label: '', action: 'char:' + id, on: s.char === id }));
-  DIFFICULTY_NAMES.forEach((n, i) => b.push({ x: 176 + i * 100, y: 218, w: 92, h: 22, label: n, action: 'diff:' + i, on: s.difficulty === i && !s.twoPlayers }));
-  b.push({ x: 176, y: 248, w: 142, h: 22, label: '1P VS CPU', action: 'mode:cpu', on: !s.twoPlayers });
-  b.push({ x: 326, y: 248, w: 142, h: 22, label: '2 JUGADORES', action: 'mode:2p', on: s.twoPlayers });
-  b.push({ x: 230, y: 282, w: 180, h: 32, label: '¡A LUCHAR!', action: 'fight' });
+  FIGHTER_IDS.forEach((id, i) => b.push({ x: cardX(i), y: CARD_Y, w: CARD, h: CARD, label: '', action: 'char:' + id, on: s.char === id || (s.twoPlayers && s.char2 === id) }));
+  DIFFICULTY_NAMES.forEach((n, i) => b.push({ x: 176 + i * 100, y: 206, w: 92, h: 20, label: n, action: 'diff:' + i, on: s.difficulty === i && !s.twoPlayers }));
+  b.push({ x: 176, y: 232, w: 142, h: 20, label: '1P ARCADE', action: 'mode:cpu', on: !s.twoPlayers });
+  b.push({ x: 326, y: 232, w: 142, h: 20, label: '2 JUGADORES', action: 'mode:2p', on: s.twoPlayers });
+  STAGE_CHOICES.forEach((st, i) => b.push({ x: 176 + i * 100, y: 258, w: 92, h: 20, label: st === 'random' ? 'AL AZAR' : STAGES[st].short, action: 'stage:' + st, on: s.stage === st }));
+  b.push({ x: 230, y: 286, w: 180, h: 30, label: '¡A LUCHAR!', action: 'fight' });
   return b;
 }
 
@@ -45,41 +60,67 @@ function drawButton(r: Renderer, b: Button, size = 8) {
   if (b.label) r.text(b.label, b.x + b.w / 2, b.y + b.h / 2 + 1, size, b.on ? '#ffe86b' : '#d8d8e8');
 }
 
+function drawStats(r: Renderer, id: FighterId, sx: number, head: string, headColor: string) {
+  const c = r.ctx, d = FIGHTERS[id];
+  r.text(head, sx, 50, 7, headColor, 'left');
+  const rows: [string, number][] = [['FUERZA', d.stats.fuerza], ['VELOC.', d.stats.velocidad], ['TECNICA', d.stats.tecnica], ['AGUANTE', d.stats.aguante]];
+  rows.forEach(([n, v], k) => {
+    const yy = 68 + k * 20;
+    r.text(n, sx, yy, 6, '#fff', 'left');
+    for (let j = 0; j < 5; j++) { c.fillStyle = '#000'; c.fillRect(sx + j * 12 - 1, yy + 6, 11, 7); c.fillStyle = j < v ? '#ffb400' : '#33334a'; c.fillRect(sx + j * 12, yy + 7, 9, 5); }
+  });
+  r.text('ESPECIAL', sx, 152, 6, '#fff', 'left');
+  r.text(d.specialName, sx, 164, 7, '#ff7a50', 'left');
+}
+
 export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
   r.time++;
   r.begin();
   r.drawStage(40, 0.72);
   const c = r.ctx;
-  r.bigText('ELIGE TU LUCHADOR', VW / 2, 22, 16);
+  r.bigText('ELIGE TU LUCHADOR', VW / 2, 20, 16);
+  const blink = Math.floor(r.time / 10) % 2 === 0;
   for (const b of selectButtons(s)) {
     if (b.action.startsWith('char:')) {
-      const id = b.action.slice(5) as 'chapa' | 'ares', d = FIGHTERS[id];
-      const blink = b.on && Math.floor(r.time / 10) % 2 === 0;
+      const id = b.action.slice(5) as FighterId, d = FIGHTERS[id];
+      const p1 = s.char === id, p2 = s.twoPlayers && s.char2 === id;
+      const frame = p1 ? (blink ? '#fff' : COL_J1) : p2 ? (blink ? '#fff' : COL_J2) : '#55556a';
       c.fillStyle = '#000'; c.fillRect(b.x - 5, b.y - 5, b.w + 10, b.h + 10);
-      c.fillStyle = b.on ? (blink ? '#fff' : '#ffd800') : '#55556a'; c.fillRect(b.x - 3, b.y - 3, b.w + 6, b.h + 6);
-      r.drawPortrait(id, b.x, b.y, b.w, id === 'ares');
-      if (!b.on) { c.fillStyle = 'rgba(0,0,20,0.5)'; c.fillRect(b.x, b.y, b.w, b.h); }
-      else r.text(s.twoPlayers ? 'J1' : 'TU', b.x + 16, b.y + 12, 8, '#ffd800');
-      r.text(d.name, b.x + b.w / 2, b.y + b.h + 16, 12, b.on ? '#ffd800' : '#fff');
-      r.text(d.title, b.x + b.w / 2, b.y + b.h + 31, 6, '#b8c8ff');
-      // estadísticas
-      const sx = id === 'chapa' ? 14 : VW - 126;
-      const rows: [string, number][] = [['FUERZA', d.stats.fuerza], ['VELOC.', d.stats.velocidad], ['TECNICA', d.stats.tecnica], ['AGUANTE', d.stats.aguante]];
-      rows.forEach(([n, v], k) => {
-        const yy = 62 + k * 22;
-        r.text(n, sx, yy, 6, '#fff', 'left');
-        for (let j = 0; j < 5; j++) { c.fillStyle = '#000'; c.fillRect(sx + j * 12 - 1, yy + 6, 11, 7); c.fillStyle = j < v ? '#ffb400' : '#33334a'; c.fillRect(sx + j * 12, yy + 7, 9, 5); }
-      });
-      r.text('ESPECIAL', sx, 152, 6, '#fff', 'left');
-      r.text(d.specialName, sx, 164, 7, '#ff7a50', 'left');
+      c.fillStyle = frame; c.fillRect(b.x - 3, b.y - 3, b.w + 6, b.h + 6);
+      r.drawPortrait(id, b.x, b.y, b.w);
+      if (!p1 && !p2) { c.fillStyle = 'rgba(0,0,20,0.5)'; c.fillRect(b.x, b.y, b.w, b.h); }
+      if (p1) r.text(s.twoPlayers ? 'J1' : 'TU', b.x + 12, b.y + 10, 7, COL_J1);
+      if (p2) r.text('J2', b.x + b.w - 12, b.y + 10, 7, COL_J2);
+      r.text(d.name, b.x + b.w / 2, b.y + b.h + 14, 9, p1 ? COL_J1 : p2 ? COL_J2 : '#fff');
+      r.text(d.title, b.x + b.w / 2, b.y + b.h + 28, 5, '#b8c8ff');
     } else drawButton(r, b, b.action === 'fight' ? 12 : 7);
   }
-  r.text('DIFICULTAD', 168, 229, 6, '#fff', 'right');
-  r.text('MODO', 168, 259, 6, '#fff', 'right');
+  // paneles laterales: J1 a la izquierda; J2 o la escalera arcade a la derecha
+  drawStats(r, s.char, 12, s.twoPlayers ? 'J1' : 'TU', COL_J1);
+  const rx = VW - 104;
+  if (s.twoPlayers) drawStats(r, s.char2, rx, 'J2', COL_J2);
+  else {
+    r.text('ARCADE', rx, 50, 7, COL_J2, 'left');
+    r.text('RIVALES', rx, 66, 6, '#fff', 'left');
+    FIGHTER_IDS.filter((id) => id !== s.char).forEach((id, k) => {
+      const yy = 78 + k * 30;
+      c.fillStyle = '#000'; c.fillRect(rx - 1, yy - 1, 26, 26);
+      r.drawPortrait(id, rx, yy, 24);
+      r.text(FIGHTERS[id].name, rx + 30, yy + 12, 6, '#d8d8e8', 'left');
+    });
+  }
+  const mid = s.twoPlayers
+    ? `${FIGHTERS[s.char].name}  VS  ${FIGHTERS[s.char2].name}`
+    : 'VENCE A LOS OTROS TRES LUCHADORES';
+  r.text(mid, VW / 2, 182, 8, s.twoPlayers ? '#fff' : '#ffd800');
+  if (s.twoPlayers && touch) r.text(`TOCA UN RETRATO PARA ELEGIR J${s.pickTurn + 1}`, VW / 2, 195, 6, s.pickTurn ? COL_J2 : COL_J1);
+  r.text('DIFICULTAD', 168, 216, 6, '#fff', 'right');
+  r.text('MODO', 168, 242, 6, '#fff', 'right');
+  r.text('ESCENARIO', 168, 268, 6, '#fff', 'right');
   if (!touch) {
     if (s.twoPlayers) {
-      r.text('J1: WASD + F/G (FLOJOS) T/Y (FUERTES) R BLOQUEO H ESPECIAL', VW / 2, 330, 6, '#ffd800');
-      r.text('J2: FLECHAS + J/K (FLOJOS) U/I (FUERTES) O BLOQUEO L ESPECIAL', VW / 2, 345, 6, '#3cb8ff');
+      r.text('J1: A/D ELEGIR - WASD + F/G (FLOJOS) T/Y (FUERTES) R BLOQUEO H ESPECIAL', VW / 2, 330, 6, COL_J1);
+      r.text('J2: FLECHAS ELEGIR - FLECHAS + J/K (FLOJOS) U/I (FUERTES) O BLOQUEO L ESPECIAL', VW / 2, 345, 6, COL_J2);
     } else {
       r.text('WASD/FLECHAS MOVER - F/G GOLPES FLOJOS - T/Y FUERTES - R BLOQUEO - H ESPECIAL', VW / 2, 330, 6, '#ffd800');
       r.text('ATRAS = BLOQUEAR - DOBLE TOQUE = DASH - BARRA LLENA + ESPECIAL = SUPER - ESC PAUSA', VW / 2, 345, 6, '#fff');
@@ -87,14 +128,54 @@ export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
   } else r.text('ATRAS = BLOQUEAR - SP = ESPECIAL (SUPER CON BARRA LLENA) - DOBLE TOQUE = DASH', VW / 2, 336, 6, '#ffd800');
 }
 
-export function resultButtons(): Button[] {
+// ---- VS: presentación del combate ----
+export const VERSUS_FRAMES = 150;
+
+export function drawVersus(r: Renderer, left: FighterId, right: FighterId, t: number, sub: string, stage: StageId) {
+  r.time++;
+  r.begin();
+  const c = r.ctx;
+  r.drawStage(40, 0.82);
+  const slide = Math.min(1, t / 18), e = 1 - Math.pow(1 - slide, 3);
+  const size = 168, y = 70;
+  // franjas diagonales de color de cada jugador
+  c.save();
+  c.globalAlpha = 0.85;
+  c.fillStyle = '#5a1a00'; c.beginPath(); c.moveTo(0, 50); c.lineTo(VW / 2 + 20, 50); c.lineTo(VW / 2 - 20, 270); c.lineTo(0, 270); c.fill();
+  c.fillStyle = '#0a2a5a'; c.beginPath(); c.moveTo(VW, 50); c.lineTo(VW / 2 + 22, 50); c.lineTo(VW / 2 - 18, 270); c.lineTo(VW, 270); c.fill();
+  c.restore();
+  const lx = -size + (60 + size) * e, rxp = VW - (60 + size) * e;
+  for (const [id, x, flip, col] of [[left, lx, false, COL_J1], [right, rxp, true, COL_J2]] as const) {
+    c.fillStyle = '#000'; c.fillRect(x - 4, y - 4, size + 8, size + 8);
+    c.fillStyle = col; c.fillRect(x - 2, y - 2, size + 4, size + 4);
+    r.drawPortrait(id, x, y, size, flip);
+  }
+  if (t > 12) {
+    r.text(FIGHTERS[left].name, 60 + size / 2, y + size + 22, 14, COL_J1);
+    r.text(FIGHTERS[left].title, 60 + size / 2, y + size + 40, 6, '#fff');
+    r.text(FIGHTERS[right].name, VW - 60 - size / 2, y + size + 22, 14, COL_J2);
+    r.text(FIGHTERS[right].title, VW - 60 - size / 2, y + size + 40, 6, '#fff');
+  }
+  if (t > 16) {
+    const pop = Math.min(1, (t - 16) / 8);
+    c.save(); c.translate(VW / 2, y + size / 2); c.scale(2.6 - 1.6 * pop, 2.6 - 1.6 * pop); c.globalAlpha = pop;
+    r.bigText('VS', 0, 0, 44);
+    c.restore();
+  }
+  r.bigText('STREET CAI', VW / 2, 28, 18);
+  if (sub) r.text(sub, VW / 2, 322, 9, '#ffd800');
+  r.text(STAGES[stage].name + ' · CADIZ', VW / 2, 342, 7, '#fff');
+}
+
+/** final = ya ha ganado a todos los rivales del arcade. */
+export function resultButtons(final = false): Button[] {
   return [
-    { x: 150, y: 290, w: 160, h: 30, label: 'REVANCHA', action: 'rematch', on: true },
-    { x: 330, y: 290, w: 160, h: 30, label: 'MENU', action: 'menu' },
+    { x: 150, y: 296, w: 160, h: 30, label: final ? 'OTRA VEZ' : 'SIGUIENTE', action: final ? 'arcade:again' : 'arcade:next', on: true },
+    { x: 330, y: 296, w: 160, h: 30, label: 'MENU', action: 'menu' },
   ];
 }
 
-export function drawResult(r: Renderer, winnerId: 'chapa' | 'ares', loserId: 'chapa' | 'ares', headline: string, score: string) {
+export function drawResult(r: Renderer, winnerId: FighterId, loserId: FighterId, headline: string, score: string, final = false) {
   r.time++;
   r.begin();
   r.drawStage(40, 0.75);
@@ -106,8 +187,9 @@ export function drawResult(r: Renderer, winnerId: 'chapa' | 'ares', loserId: 'ch
   r.drawSprite(winnerId, `idle_${Math.floor(r.time / 7) % 8}`, 130, 262, 1, 1.2);
   r.drawSprite(loserId, 'ko_4', 520, 262, -1, 1.2);
   r.text(`${d.name} GANA`, VW / 2, 236, 14, '#ffd800');
-  r.text(score, VW / 2, 262, 12, '#fff');
-  for (const b of resultButtons()) drawButton(r, b, 10);
+  r.text(score, VW / 2, 262, final ? 9 : 12, final ? '#ffd800' : '#fff');
+  if (final) r.text('CAMPEON DE LA PLAZA DE LAS FLORES', VW / 2, 280, 7, '#fff');
+  for (const b of resultButtons(final)) drawButton(r, b, 10);
 }
 
 // ---- CONTINUE? (cuando pierde un jugador humano) ----
@@ -165,7 +247,7 @@ export function continueButtons(): Button[] {
 }
 
 /** t = frames desde que empezó la cuenta; overT >= 0 cuando ya es GAME OVER. */
-export function drawContinue(r: Renderer, loserId: 'chapa' | 'ares', t: number, overT: number, touch: boolean) {
+export function drawContinue(r: Renderer, loserId: FighterId, t: number, overT: number, touch: boolean) {
   r.time++;
   r.begin();
   const c = r.ctx;

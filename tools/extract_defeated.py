@@ -9,6 +9,8 @@ from scipy import ndimage as ndi
 SOURCES = {
     'ares': 'documentacion/ares-derrotado.png',
     'chapa': 'documentacion/chapa-derrotado.png',
+    'alba': 'documentacion/alba-derrotado.png',
+    'martin': 'documentacion/martin-derrotado.png',
 }
 OUT_W = 420  # ancho final (px); se dibuja suavizado a ~210 px lógicos
 
