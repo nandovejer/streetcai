@@ -8,7 +8,7 @@ import { AI } from './game/ai';
 import { Difficulty, FIGHTERS, FIGHTER_IDS, FighterId, HOME_STAGE, STAGE_IDS, StageId, VH, VW } from './game/data';
 import { Match } from './game/match';
 import { Renderer } from './render/renderer';
-import { CONTINUE_FROM, CONTINUE_SECOND, STAGE_CHOICES, Settings, VERSUS_FRAMES, continueButtons, drawContinue, drawDemoOverlay, drawPause, drawResult, drawSelect, drawTitle, drawVersus, freezeTitleIntro, skipTitleIntro, titleIntroPlaying, hitButton, pauseButtons, resultButtons, selectButtons } from './ui/screens';
+import { CONTINUE_FROM, CONTINUE_SECOND, STAGE_CHOICES, Settings, VERSUS_FRAMES, continueButtons, drawContinue, randomQuote, drawDemoOverlay, drawPause, drawResult, drawSelect, drawTitle, drawVersus, freezeTitleIntro, skipTitleIntro, titleIntroPlaying, hitButton, pauseButtons, resultButtons, selectButtons } from './ui/screens';
 import { isTouchDevice, setupTouch } from './ui/touch';
 import { addCredit, getCredits, useCredits } from './ui/credits';
 import { STAFF_FRAMES, drawStaffRoll } from './ui/staffroll';
@@ -45,7 +45,7 @@ async function boot() {
   let ladder: FighterId[] = [];
   let stage = 0;
   let vsT = 0;
-  let vsFrozen = false;
+  let vsFrozen = false, contFrozen = false;
   const newLadder = () => {
     ladder = FIGHTER_IDS.filter((id) => id !== settings.char);
     for (let i = ladder.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ladder[i], ladder[j]] = [ladder[j], ladder[i]]; }
@@ -63,7 +63,7 @@ async function boot() {
   let paused = false;
   let endT = 0;
   // CONTINUE?: contT = frames de cuenta atrás; overT = frames de GAME OVER (-1 mientras cuenta)
-  let contT = 0, overT = -1;
+  let contT = 0, overT = -1, quote = '';
 
   if (touch) { setupTouch(touchRoot, input.touch); document.body.classList.add('touch'); }
   const setScreen = (s: Screen) => {
@@ -260,6 +260,7 @@ async function boot() {
 
   function startContinue() {
     contT = 0; overT = -1;
+    if (match) quote = randomQuote(match.f[match.matchWinner < 0 ? 1 : match.matchWinner].def.id);
     setScreen('continue');
     audio.voice('continue');
     audio.stopMusic();
@@ -320,7 +321,8 @@ async function boot() {
       if (demoMode) drawDemoOverlay(r, touch);
       else if (paused) drawPause(r);
     } else if (screen === 'continue' && match) {
-      drawContinue(r, match.f[1 - match.matchWinner].def.id, contT, overT, touch);
+      const w = match.matchWinner < 0 ? 1 : match.matchWinner;
+      drawContinue(r, match.f[w].def.id, match.f[1 - w].def.id, quote, contT, overT, touch);
     } else if (screen === 'versus') {
       const sub = settings.twoPlayers ? 'J1  VS  J2' : `RIVAL ${stage + 1} DE ${ladder.length}`;
       const help = touch ? ['JOYSTICK MOVER - P/K FLOJOS - PF/KF FUERTES - SP ESPECIAL', 'ATRAS = BLOQUEAR - DOBLE TOQUE = DASH - BARRA LLENA + SP = SUPER']
@@ -353,7 +355,7 @@ async function boot() {
       if (params.has('untilSuper') && match!.superFreeze > 0 && match!.superFreeze < 30) { paused = true; break; }
     }
   } else if (params.get('screen') === 'continue') {
-    // Pruebas: ?screen=continue&lose=<luchador> abre directamente la cuenta atrás.
+    // Pruebas: ?screen=continue&lose=<luchador>[&ct=N] abre la cuenta atrás (ct la congela en el frame N).
     const lp = params.get('lose') as FighterId;
     const lose: FighterId = FIGHTER_IDS.includes(lp) ? lp : 'chapa';
     settings.char = lose;
@@ -361,6 +363,7 @@ async function boot() {
     match = new Match(FIGHTERS[lose], FIGHTERS[ladder[0]]);
     match.matchWinner = 1;
     startContinue();
+    if (params.has('ct')) { contT = Number(params.get('ct')); contFrozen = true; }
   } else if (params.get('screen') === 'versus') {
     // Pruebas: ?screen=versus[&vst=60] (vst congela la animación en ese frame)
     if (params.has('2p')) settings.twoPlayers = true;
@@ -391,7 +394,7 @@ async function boot() {
       acc -= STEP;
       if (screen === 'fight' && !paused) { stepFight(); if (demoMode && match && match.frame > DEMO_MAX) endDemo(); }
       else if (screen === 'title' && !titleIntroPlaying() && ++titleIdle > DEMO_AFTER) startDemo();
-      else if (screen === 'continue') stepContinue();
+      else if (screen === 'continue' && !contFrozen) stepContinue();
       else if (screen === 'credits' && ++staffT >= STAFF_FRAMES) closeStaff();
       if (champT > 0 && screen === 'result' && ++champT > 60 * 5) { champT = 0; openStaff(); }
       else if (champT > 0 && screen !== 'result') champT = 0;

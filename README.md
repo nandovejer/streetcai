@@ -2,7 +2,7 @@
 
 Juego de lucha arcade 2D en el navegador (escritorio y móvil), ambientado en Cádiz.
 
-- **Luchadores:** Chapa (El Guerrero), Ares (El Viajero), Alba (El Marinero) y Martín (El Veterano).
+- **Luchadores:** Chapa (El Guerrero), Ares (El Viajero), Alba (El Marinero), Martín (El Veterano) y Selu (El Dúo).
 - **Escenarios:** el barrio de cada luchador (Candelaria, Santa María, La Caleta y Teatro Falla) y la Plaza de las Flores. En la selección: "BARRIO RIVAL" (se lucha en el barrio del rival, como en las recreativas) o "AL AZAR" (cualquiera, incluida la Plaza).
 
 ## Créditos y agradecimientos
@@ -11,7 +11,7 @@ El botón de la estrella, junto al de pantalla completa, abre el rodillo de cré
 
 ## Créditos (monedas)
 
-Como en una recreativa: la tecla `5` (o el botón de moneda en móvil) añade un crédito, hasta 9. Empezar cuesta 1 crédito en 1P y 2 en 2 jugadores; ganar y pasar al siguiente rival es gratis; continuar tras perder cuesta 1. Sin créditos, la cuenta atrás de CONTINUE sigue corriendo y se puede echar uno antes de que llegue a 0. Al cargar la página hay 1 crédito de regalo; los créditos no se guardan al recargar.
+Como en una recreativa: la tecla `5` (o el botón de moneda en móvil) añade un crédito, hasta 9. Empezar cuesta 1 crédito en 1P y 2 en 2 jugadores; ganar y pasar al siguiente rival es gratis; continuar tras perder cuesta 1. La pantalla de CONTINUE, como en las recreativas, muestra la cara del ganador a la izquierda, la del derrotado machacado a la derecha y una frase del ganador escribiéndose abajo (en `WIN_QUOTES`, `src/ui/screens.ts`); sale al perder contra la CPU y al acabar cada combate de 2 jugadores. Sin créditos, la cuenta atrás de CONTINUE sigue corriendo y se puede echar uno antes de que llegue a 0. Al cargar la página hay 1 crédito de regalo; los créditos no se guardan al recargar.
 
 ## Modo demo
 
@@ -60,7 +60,7 @@ En la selección: A/D (o flechas en 1P) mueven el cursor del J1, las flechas el 
 
 También hay soporte básico de mando (Gamepad API). `M` silencia en los menús, `F2` muestra hitboxes/hurtboxes.
 
-Parámetros de URL para pruebas: `?demo=alba&vs=martin&ff=600` (IA contra IA avanzando 600 frames), `?stage=caleta`, `?debug=1` (cajas), `?touch=1` (fuerza controles táctiles), `?screen=select&2p=1`, `?screen=versus&vst=80` (VS congelado), `?screen=result&final=1`, `?screen=continue&lose=martin`.
+Parámetros de URL para pruebas: `?demo=alba&vs=martin&ff=600` (IA contra IA avanzando 600 frames), `?stage=caleta`, `?debug=1` (cajas), `?touch=1` (fuerza controles táctiles), `?screen=select&2p=1`, `?screen=versus&vst=80` (VS congelado), `?screen=result&final=1`, `?screen=continue&lose=martin` (con `&ct=200` congela la cuenta atrás en ese frame).
 
 ## Voces del locutor
 

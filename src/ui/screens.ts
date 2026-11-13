@@ -469,42 +469,105 @@ export function continueButtons(): Button[] {
   ];
 }
 
-/** t = frames desde que empezó la cuenta; overT >= 0 cuando ya es GAME OVER. */
-export function drawContinue(r: Renderer, loserId: FighterId, t: number, overT: number, touch: boolean) {
+/** Frases del ganador en la pantalla de CONTINUE (mayúsculas sin tilde: la fuente pixel no las tiene). */
+export const WIN_QUOTES: Record<FighterId, string[]> = {
+  chapa: [
+    'EN LA CANDELARIA SE APRENDE A PELEAR ANTES QUE A ANDAR, PICHA.',
+    'ESE GOLPE TE LO DEBIA DESDE EL CARNAVAL PASADO.',
+    'VUELVE CUANDO TENGAS MAS FUERZA QUE ARTE... O AL REVES.',
+  ],
+  ares: [
+    'HE DADO LA VUELTA AL MUNDO Y COMO EL LEVANTE DE CAI NO HAY NADA.',
+    'TE HE VISTO VENIR DESDE LA PLAYA DE SANTA MARIA.',
+    'TRANQUILO, EL LEVANTE TAMBIEN SE LLEVA LAS SOMBRILLAS.',
+  ],
+  alba: [
+    'LA MAREA SUBE Y TU TE HUNDES. ASI ES LA CALETA.',
+    'APRENDE A NADAR ANTES DE VOLVER A MI ORILLA.',
+    'HE VISTO OLAS MAS PELIGROSAS QUE TU UN DIA DE PONIENTE.',
+  ],
+  martin: [
+    'TENGO MAS AÑOS EN EL FALLA QUE TU EN EL MUNDO, CHIQUILLO.',
+    'QUITATE EL SOMBRERO ANTE LA EXPERIENCIA.',
+    'EL CONCURSO SE GANA CON TABLAS, NO CON PRISAS.',
+  ],
+  selu: [
+    'SOMOS DOS Y TU NI UNO ENTERO, QUILLO.',
+    'YA TE HEMOS SACADO UN CUPLE: SE LLAMA "EL QUE CAYO".',
+    'EN LA PLAZA DE LAS FLORES SE CANTA... Y SE PEGA.',
+  ],
+};
+export const randomQuote = (id: FighterId) => WIN_QUOTES[id][Math.floor(Math.random() * WIN_QUOTES[id].length)];
+
+function wrap(s: string, max: number): string[] {
+  const out: string[] = [];
+  let line = '';
+  for (const w of s.split(' ')) {
+    if (line && (line + ' ' + w).length > max) { out.push(line); line = w; } else line = line ? line + ' ' + w : w;
+  }
+  if (line) out.push(line);
+  return out;
+}
+
+/** Imagen encajada (cover) en un recuadro con marco, al estilo de las caras de la pantalla de CONTINUE. */
+function framedImage(r: Renderer, img: HTMLImageElement, x: number, y: number, w: number, h: number, grey: number) {
+  const c = r.ctx;
+  c.fillStyle = '#ffd800'; c.fillRect(x - 3, y - 3, w + 6, h + 6);
+  c.fillStyle = '#000'; c.fillRect(x - 1, y - 1, w + 2, h + 2);
+  const s = Math.max(w / img.width, h / img.height), sw = w / s, sh = h / s;
+  c.save();
+  c.imageSmoothingEnabled = true;
+  if (grey > 0) c.filter = `grayscale(${grey}) brightness(${1 - grey * 0.45})`;
+  c.drawImage(img, (img.width - sw) / 2, Math.min(img.height - sh, img.height * 0.03), sw, sh, x, y, w, h);
+  c.restore();
+}
+
+/**
+ * CONTINUE? al estilo de las recreativas: el ganador a la izquierda, el derrotado (machacado) a la derecha y la
+ * frase del ganador escribiéndose abajo. t = frames desde que empezó la cuenta; overT >= 0 cuando ya es GAME OVER.
+ */
+export function drawContinue(r: Renderer, winnerId: FighterId, loserId: FighterId, quote: string, t: number, overT: number, touch: boolean) {
   r.time++;
   r.begin();
   const c = r.ctx;
   c.fillStyle = '#000'; c.fillRect(-10, -10, VW + 20, VH + 20);
   const count = Math.max(0, CONTINUE_FROM - Math.floor(t / CONTINUE_SECOND));
   const inSec = (t % CONTINUE_SECOND) / CONTINUE_SECOND;
-
-  // retrato del derrotado (se apaga a gris al llegar a GAME OVER)
-  const img = r.assets.defeated[loserId];
-  const pw = 270, ph = img.height * (pw / img.width), px = 44, py = 312 - ph;
   const grey = overT >= 0 ? Math.min(1, overT / 40) : 0;
-  c.save();
-  c.imageSmoothingEnabled = true;
-  if (grey > 0) c.filter = `grayscale(${grey}) brightness(${1 - grey * 0.45})`;
-  c.drawImage(img, px, py, pw, ph);
-  c.restore();
+
+  // caras: entran deslizándose desde los lados
+  const slide = Math.max(0, 1 - Math.min(t, overT >= 0 ? 99 : t) / 14) ** 2;
+  const bw = 232, bh = 172, by = 66;
+  framedImage(r, r.assets.portrait[winnerId], 56 - slide * 320, by, bw, bh, grey * 0.6);
+  framedImage(r, r.assets.defeated[loserId], VW - 56 - bw + slide * 320, by, bw, bh, grey);
+  if (slide === 0) {
+    r.text(FIGHTERS[winnerId].name, 56 + bw / 2, by + bh + 14, 9, '#ffd800');
+    r.text(FIGHTERS[loserId].name, VW - 56 - bw / 2, by + bh + 14, 9, '#8a8fa8');
+  }
+
+  // frase del ganador, letra a letra
+  const shown = Math.max(0, Math.floor((t - 16) / 2));
+  let left = shown;
+  wrap(quote, 44).forEach((ln, i) => {
+    if (left <= 0) return;
+    gradText(r, ln.slice(0, left), 70, 276 + i * 18, 11, '#e8ecff', '#5a78ff');
+    left -= ln.length + 1;
+  });
 
   if (overT < 0) {
-    gradText(r, 'CONTINUE?', 40, 34, 22, '#ffd060', '#ff6a00');
-    gradText(r, String(count), 262, 34, 22, '#ffffff', '#9a9aa8');
+    gradText(r, 'CONTINUE?', 330, 40, 18, '#ffd060', '#ff6a00');
+    drawBulbs(r, String(count), 508, 22, 5, 1 - inSec * 0.45);
     const n = getCredits();
     gradText(r, `CREDIT ${n}`, 492, 342, 12, n ? '#d8dcff' : '#ffb0a0', n ? '#5a6cff' : '#ff3b1f', 'center');
-    // bombillas: el número "late" al principio de cada segundo
-    const glow = 1 - inSec * 0.45;
-    drawBulbs(r, String(count), 396, 72, 32, glow);
     const blink = Math.floor(r.time / 20) % 2 === 0;
     if (n === 0) {
-      if (blink || creditDenied()) r.text('INSERT COIN', 186, 296, 12, creditDenied() ? '#ff3b1f' : '#fff', 'center', '#000');
-      r.text(touch ? 'TOCA LA MONEDA PARA SEGUIR' : 'PULSA 5 PARA AÑADIR CREDITO', 186, 334, 6, '#ffd800');
+      if (blink || creditDenied()) r.text('INSERT COIN', 186, 322, 10, creditDenied() ? '#ff3b1f' : '#fff', 'center', '#000');
+      r.text(touch ? 'TOCA LA MONEDA PARA SEGUIR' : 'PULSA 5 PARA AÑADIR CREDITO', 186, 340, 6, '#ffd800');
     } else if (touch) for (const b of continueButtons()) drawButton(r, b, 9);
-    else if (blink) r.text('ENTER = SEGUIR   ESC = ABANDONAR', 186, 334, 6, '#ffd800');
+    else if (blink) r.text('ENTER = SEGUIR   ESC = ABANDONAR', 186, 336, 6, '#ffd800');
   } else {
-    const a = Math.min(1, overT / 30);
-    c.globalAlpha = a;
+    c.fillStyle = `rgba(0,0,0,${Math.min(0.55, overT / 60)})`; c.fillRect(0, 0, VW, VH);
+    c.globalAlpha = Math.min(1, overT / 30);
     r.bigText('GAME OVER', VW / 2, VH / 2 - 10, 40);
     c.globalAlpha = 1;
   }
