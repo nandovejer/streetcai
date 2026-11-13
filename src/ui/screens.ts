@@ -16,8 +16,77 @@ export interface Button { x: number; y: number; w: number; h: number; label: str
 
 const COL_J1 = '#ffd800', COL_J2 = '#3cb8ff';
 
+// ---- INSERT COIN: primera pantalla; la pulsación desbloquea el audio del navegador ----
+export const COIN_DROP = 22, COIN_TO_TITLE = 75;
+
+/** insertedT = frames desde que se echó la moneda (-1 si aún no). */
+export function drawCoin(r: Renderer, insertedT: number, touch: boolean) {
+  r.time++;
+  r.begin();
+  const c = r.ctx, t = r.time;
+  c.fillStyle = '#000'; c.fillRect(-10, -10, VW + 20, VH + 20);
+  // líneas de barrido de monitor
+  c.fillStyle = 'rgba(255,255,255,0.025)';
+  for (let y = 0; y < VH; y += 3) c.fillRect(0, y, VW, 1);
+
+  const inserted = insertedT >= 0;
+  // ranura de la máquina
+  const sx = VW / 2, sy = 262;
+  c.fillStyle = '#2a2a38'; c.fillRect(sx - 40, sy - 22, 80, 44);
+  c.fillStyle = '#4a4a5c'; c.fillRect(sx - 38, sy - 20, 76, 40);
+  const glow = inserted && insertedT >= COIN_DROP ? Math.max(0, 1 - (insertedT - COIN_DROP) / 30) : 0;
+  c.fillStyle = glow > 0 ? `rgb(255,${Math.round(120 + 135 * glow)},60)` : (Math.floor(t / 20) % 2 ? '#ff3020' : '#a01810');
+  c.fillRect(sx - 30, sy - 14, 60, 10);
+  c.fillStyle = '#000'; c.fillRect(sx - 3, sy - 12, 6, 28);
+  r.text('25', sx, sy + 12, 6, '#d8d8e8');
+
+  // moneda: gira en el aire y, al echarla, cae a la ranura
+  let cy = 150, rx = 30 * Math.abs(Math.cos(t * 0.07));
+  if (inserted) {
+    const k = Math.min(1, insertedT / COIN_DROP);
+    cy = 150 + (sy - 8 - 150) * k * k;
+    rx = Math.max(1.5, 30 * (1 - k));
+  }
+  if (!inserted || insertedT < COIN_DROP) {
+    const ry = 30;
+    c.fillStyle = '#7a4a08'; c.beginPath(); c.ellipse(sx, cy, rx + 2, ry + 2, 0, 0, Math.PI * 2); c.fill();
+    const g = c.createLinearGradient(sx - rx, cy - ry, sx + rx, cy + ry);
+    g.addColorStop(0, '#fff3a0'); g.addColorStop(0.45, '#ffc020'); g.addColorStop(1, '#b06a00');
+    c.fillStyle = g; c.beginPath(); c.ellipse(sx, cy, rx, ry, 0, 0, Math.PI * 2); c.fill();
+    if (rx > 12) {
+      c.save(); c.translate(sx, cy); c.scale(rx / 30, 1);
+      c.strokeStyle = 'rgba(122,74,8,0.8)'; c.lineWidth = 2; c.beginPath(); c.arc(0, 0, 22, 0, Math.PI * 2); c.stroke();
+      r.text('SC', 0, 1, 14, '#8a5200', 'center', null);
+      c.restore();
+    }
+  }
+
+  if (!inserted) {
+    if (Math.floor(t / 30) % 2 === 0) r.bigText('INSERT COIN', VW / 2, 66, 26);
+    r.text(touch ? 'TOCA LA PANTALLA' : 'PULSA CUALQUIER TECLA', VW / 2, 306, 8, '#fff');
+  } else {
+    const pop = Math.min(1, Math.max(0, (insertedT - COIN_DROP) / 8));
+    if (pop > 0) {
+      c.save(); c.translate(VW / 2, 66); c.scale(1.6 - 0.6 * pop, 1.6 - 0.6 * pop); c.globalAlpha = pop;
+      r.bigText('¡A JUGAR!', 0, 0, 26); c.restore(); c.globalAlpha = 1;
+    }
+  }
+  r.text(`CREDIT ${inserted && insertedT >= COIN_DROP ? 1 : 0}`, VW - 12, VH - 12, 8, '#fff', 'right');
+  r.text('© 2026 STREET CAI', VW / 2, VH - 12, 6, '#8a8aa0');
+  // fundido a negro antes de la portada
+  if (inserted && insertedT > COIN_TO_TITLE - 20) { c.fillStyle = `rgba(0,0,0,${(insertedT - (COIN_TO_TITLE - 20)) / 20})`; c.fillRect(-10, -10, VW + 20, VH + 20); }
+}
+
+// ---- DEMO: rótulo encima del combate de exhibición ----
+export function drawDemoOverlay(r: Renderer, touch: boolean) {
+  r.begin();
+  const t = r.time;
+  r.text('DEMO', VW / 2, 58, 10, '#ff5a3c');
+  if (Math.floor(t / 30) % 2 === 0) r.text(touch ? 'TOCA PARA JUGAR' : 'PULSA ENTER PARA JUGAR', VW / 2, 300, 10, '#ffd800');
+}
+
 // ---- Portada con intro animada (solo la primera vez) ----
-export interface TitleHooks { play: (sfx: 'punch' | 'heavy' | 'ko' | 'whoosh' | 'special' | 'start' | 'land') => void; say: (text: string) => void }
+export interface TitleHooks { play: (sfx: 'punch' | 'heavy' | 'ko' | 'whoosh' | 'special' | 'start' | 'land') => void; say: (text: string) => void; music: () => void }
 /** Momentos de la intro (en frames a 60 Hz). */
 const INTRO = { tiltEnd: 80, letters: 52, letterGap: 7, letterFall: 13, caiStart: 104, caiHit: 116, shine: 128, shineLen: 30, press: 150, end: 160 };
 const TITLE_Y = [50, 104];
@@ -162,7 +231,7 @@ export function drawTitle(r: Renderer, touch: boolean, hooks?: TitleHooks) {
 
   // PULSA ENTER
   if (f >= INTRO.press) {
-    if (crossed(INTRO.press)) hooks?.play('start');
+    if (crossed(INTRO.press)) { hooks?.play('start'); hooks?.music(); }
     const fade = Math.min(1, (f - INTRO.press) / 15);
     if (Math.floor(t / 30) % 2 === 0 || f < INTRO.press + 30) {
       c.globalAlpha = fade;

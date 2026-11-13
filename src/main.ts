@@ -8,10 +8,10 @@ import { AI } from './game/ai';
 import { Difficulty, FIGHTERS, FIGHTER_IDS, FighterId, STAGE_IDS, StageId, VH, VW } from './game/data';
 import { Match } from './game/match';
 import { Renderer } from './render/renderer';
-import { CONTINUE_FROM, CONTINUE_SECOND, STAGE_CHOICES, Settings, VERSUS_FRAMES, continueButtons, drawContinue, drawPause, drawResult, drawSelect, drawTitle, drawVersus, freezeTitleIntro, skipTitleIntro, titleIntroPlaying, hitButton, pauseButtons, resultButtons, selectButtons } from './ui/screens';
+import { COIN_DROP, COIN_TO_TITLE, CONTINUE_FROM, CONTINUE_SECOND, STAGE_CHOICES, Settings, VERSUS_FRAMES, continueButtons, drawCoin, drawContinue, drawDemoOverlay, drawPause, drawResult, drawSelect, drawTitle, drawVersus, freezeTitleIntro, skipTitleIntro, titleIntroPlaying, hitButton, pauseButtons, resultButtons, selectButtons } from './ui/screens';
 import { isTouchDevice, setupTouch } from './ui/touch';
 
-type Screen = 'title' | 'select' | 'versus' | 'fight' | 'result' | 'continue';
+type Screen = 'coin' | 'title' | 'select' | 'versus' | 'fight' | 'result' | 'continue';
 
 async function boot() {
   const canvas = document.getElementById('game') as HTMLCanvasElement;
@@ -49,6 +49,15 @@ async function boot() {
   let match: Match | null = null;
   let ai: AI | null = null;
   let demoAi: AI | null = null;
+  // Modo exhibición: combate CPU contra CPU tras un rato sin tocar nada en la portada.
+  let demoMode = false;
+  let titleIdle = 0;
+  const DEMO_AFTER = 60 * 20, DEMO_MAX = 60 * 45;
+  // INSERT COIN: frames desde que se echó la moneda (-1 = esperando)
+  let coinT = -1;
+  /** Pruebas: ?coinAt=N congela la animación de la moneda en el frame N. */
+  const coinFrozen = params.has('coinAt');
+  if (coinFrozen) coinT = Number(params.get('coinAt'));
   let paused = false;
   let endT = 0;
   // CONTINUE?: contT = frames de cuenta atrás; overT = frames de GAME OVER (-1 mientras cuenta)
@@ -58,6 +67,7 @@ async function boot() {
   const setScreen = (s: Screen) => {
     screen = s;
     document.body.dataset.screen = s;
+    titleIdle = 0;
     audio.startMusic();
   };
 
@@ -77,6 +87,27 @@ async function boot() {
     r.resetFight();
     audio.play('start');
     setScreen('fight');
+  };
+
+  const insertCoin = () => {
+    if (coinT >= 0) return;
+    audio.setMusicHold(true);
+    audio.init();
+    coinT = 0;
+  };
+  const startDemo = () => {
+    const ids = [...FIGHTER_IDS].sort(() => Math.random() - 0.5);
+    match = new Match(FIGHTERS[ids[0]], FIGHTERS[ids[1]]);
+    fightStage = STAGE_IDS[Math.floor(Math.random() * STAGE_IDS.length)];
+    demoAi = new AI(2); ai = new AI(2);
+    demoMode = true; paused = false; endT = 0;
+    r.resetFight();
+    setScreen('fight');
+    document.body.dataset.screen = 'demo'; // sin mandos táctiles ni botón de pausa
+  };
+  const endDemo = () => {
+    demoMode = false; demoAi = null; match = null;
+    setScreen('title');
   };
 
   /** Elegir luchador. En 2 jugadores no se permite el mismo para ambos: si coinciden, se intercambian. */
@@ -119,7 +150,10 @@ async function boot() {
   canvas.addEventListener('pointerdown', (e) => {
     const b = canvas.getBoundingClientRect();
     const x = ((e.clientX - b.left) / b.width) * VW, y = ((e.clientY - b.top) / b.height) * VH;
-    if (screen === 'title') { if (titleIntroPlaying()) skipTitleIntro(r); else act('title'); }
+    titleIdle = 0;
+    if (screen === 'coin') insertCoin();
+    else if (demoMode) endDemo();
+    else if (screen === 'title') { if (titleIntroPlaying()) skipTitleIntro(r); else act('title'); }
     else if (screen === 'select') act(hitButton(selectButtons(settings), x, y));
     else if (screen === 'result') act(hitButton(resultButtons(stage >= ladder.length - 1), x, y));
     else if (screen === 'versus') act('skip');
@@ -130,10 +164,14 @@ async function boot() {
 
   window.addEventListener('keydown', (e) => {
     if (e.repeat) return;
+    if (screen === 'coin') audio.setMusicHold(true);
     audio.init();
     const k = e.code;
     if (k === 'KeyM' && screen !== 'fight') { toggleSound(); return; }
     if (k === 'F2') { r.debug = !r.debug; e.preventDefault(); return; }
+    titleIdle = 0;
+    if (screen === 'coin') { insertCoin(); return; }
+    if (demoMode) { endDemo(); return; }
     if (screen === 'title') { if (k === 'Enter' || k === 'Space') { if (titleIntroPlaying()) skipTitleIntro(r); else act('title'); } }
     else if (screen === 'select') {
       const two = settings.twoPlayers;
@@ -178,7 +216,7 @@ async function boot() {
   }
   btnMute.addEventListener('click', toggleSound);
   // Primer gesto en cualquier parte de la página: arranca el audio (y la música).
-  window.addEventListener('pointerdown', () => audio.init(), { once: true, capture: true });
+  window.addEventListener('pointerdown', () => { if (screen === 'coin') audio.setMusicHold(true); audio.init(); }, { once: true, capture: true });
   const btnFull = document.getElementById('btn-full')!;
   type FsDoc = Document & { webkitFullscreenElement?: Element; webkitExitFullscreen?: () => Promise<void>; webkitFullscreenEnabled?: boolean };
   type FsEl = HTMLElement & { webkitRequestFullscreen?: () => Promise<void> };
@@ -204,7 +242,7 @@ async function boot() {
       }
     } catch { /* no soportado (iOS) */ }
   });
-  document.addEventListener('visibilitychange', () => { if (document.hidden && screen === 'fight') paused = true; });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && screen === 'fight' && !demoMode) paused = true; });
 
   const SFX: Record<string, Parameters<AudioManager['play']>[0]> = {
     block: 'block', jump: 'jump', land: 'land', whoosh: 'whoosh', ko: 'ko', special: 'special', fall: 'fall', guardbreak: 'guardbreak', clash: 'heavy',
@@ -233,6 +271,7 @@ async function boot() {
     const m = match!;
     if (m.phase === 'matchEnd') {
       if (++endT === 1) audio.play('win');
+      if (demoMode) { if (endT > 120) endDemo(); return; }
       if (endT > 50) {
         // Si pierde un humano (contra la CPU, o cualquiera en 2 jugadores): ¿CONTINUE?
         if (settings.twoPlayers || m.matchWinner === 1) startContinue();
@@ -245,8 +284,8 @@ async function boot() {
     const wasIntro = m.phase === 'intro';
     m.step([p1, p2]);
     if (wasIntro && m.phase === 'fight') audio.play('start');
-    if (m.phase === 'intro' && m.phaseT === 5) audio.say(`Ronda ${['uno', 'dos', 'tres', 'cuatro', 'cinco'][m.round - 1] || m.round}`);
-    if (m.phase === 'intro' && m.phaseT === 78) audio.say('¡A pelear!');
+    if (!demoMode && m.phase === 'intro' && m.phaseT === 5) audio.say(`Ronda ${['uno', 'dos', 'tres', 'cuatro', 'cinco'][m.round - 1] || m.round}`);
+    if (!demoMode && m.phase === 'intro' && m.phaseT === 78) audio.say('¡A pelear!');
     if (m.phase === 'ko' && m.phaseT === 82 && m.roundWinner >= 0) audio.say(m.perfect ? '¡Perfecto!' : `${m.f[m.roundWinner].def.name.toLowerCase()} gana`);
     for (const e of m.events) {
       if (e.type === 'ko') audio.say(m.message === 'K.O.' ? 'Kei ou' : 'Tiempo');
@@ -258,15 +297,17 @@ async function boot() {
     m.events.length = 0;
   };
 
-  const titleHooks = { play: (s: Parameters<AudioManager['play']>[0]) => audio.play(s), say: (txt: string) => audio.say(txt) };
+  const titleHooks = { play: (s: Parameters<AudioManager['play']>[0]) => audio.play(s), say: (txt: string) => audio.say(txt), music: () => audio.setMusicHold(false) };
   const draw = () => {
     r.stage = screen === 'versus' || screen === 'fight' || screen === 'result' ? fightStage : 'plaza';
-    if (screen === 'title') drawTitle(r, touch, titleHooks);
+    if (screen === 'coin') drawCoin(r, coinT, touch);
+    else if (screen === 'title') drawTitle(r, touch, titleHooks);
     else if (screen === 'select') drawSelect(r, settings, touch);
     else if (screen === 'fight' && match) {
-      const you = settings.twoPlayers ? 'J1' : 'TU', other = settings.twoPlayers ? 'J2' : 'CPU';
+      const you = demoMode ? 'CPU' : settings.twoPlayers ? 'J1' : 'TU', other = settings.twoPlayers && !demoMode ? 'J2' : 'CPU';
       r.drawFight(match, [you, other]);
-      if (paused) drawPause(r);
+      if (demoMode) drawDemoOverlay(r, touch);
+      else if (paused) drawPause(r);
     } else if (screen === 'continue' && match) {
       drawContinue(r, match.f[1 - match.matchWinner].def.id, contT, overT, touch);
     } else if (screen === 'versus') {
@@ -320,8 +361,10 @@ async function boot() {
     match = new Match(FIGHTERS[settings.char], FIGHTERS[ladder[stage]]);
     match.matchWinner = 0; match.f[0].wins = 2;
     setScreen('result');
+  } else if (params.get('screen') === 'demo') {
+    startDemo();
   } else if (params.has('screen')) { if (params.has('2p')) settings.twoPlayers = true; setScreen(params.get('screen') as Screen); }
-  else setScreen('title');
+  else setScreen('coin');
   if (params.has('debug')) r.debug = true;
   if (params.has('introAt')) freezeTitleIntro(Number(params.get('introAt')));
 
@@ -333,7 +376,13 @@ async function boot() {
     let n = 0;
     while (acc >= STEP && n++ < 5) {
       acc -= STEP;
-      if (screen === 'fight' && !paused) stepFight();
+      if (screen === 'fight' && !paused) { stepFight(); if (demoMode && match && match.frame > DEMO_MAX) endDemo(); }
+      else if (screen === 'coin' && coinT >= 0 && !coinFrozen) {
+        coinT++;
+        if (coinT === 1) audio.play('whoosh');
+        if (coinT === COIN_DROP) audio.play('coin');
+        if (coinT >= COIN_TO_TITLE) setScreen('title');
+      } else if (screen === 'title' && !titleIntroPlaying() && ++titleIdle > DEMO_AFTER) startDemo();
       else if (screen === 'continue') stepContinue();
       else if (screen === 'versus' && !vsFrozen && ++vsT >= VERSUS_FRAMES) startFight();
     }

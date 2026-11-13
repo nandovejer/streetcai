@@ -1,5 +1,5 @@
 // Audio 100% sintetizado con Web Audio (sin ficheros): efectos y música arcade con cadencia andaluza.
-export type Sfx = 'punch' | 'kick' | 'heavy' | 'block' | 'jump' | 'land' | 'whoosh' | 'ko' | 'special' | 'select' | 'start' | 'win' | 'fall' | 'guardbreak' | 'tick' | 'gameover';
+export type Sfx = 'punch' | 'kick' | 'heavy' | 'block' | 'jump' | 'land' | 'whoosh' | 'ko' | 'special' | 'select' | 'start' | 'win' | 'fall' | 'guardbreak' | 'tick' | 'gameover' | 'coin';
 
 const N = (semi: number) => 440 * Math.pow(2, semi / 12); // semitonos respecto a La4
 
@@ -12,6 +12,8 @@ export class AudioManager {
   private step = 0;
   private nextT = 0;
   muted = false;
+  /** Música retenida (pantalla de moneda e intro de la portada). */
+  private musicHold = false;
 
   /** Debe llamarse desde un gesto del usuario. */
   init() {
@@ -25,7 +27,7 @@ export class AudioManager {
     this.noise = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
     const d = this.noise.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-    this.startMusic(); // la música suena por defecto desde el primer gesto
+    this.startMusic(); // la música suena por defecto desde el primer gesto (salvo si está retenida)
   }
 
   toggleMute() {
@@ -68,6 +70,7 @@ export class AudioManager {
       case 'start': [0, 4, 7, 12].forEach((s, i) => this.tone('square', N(s), N(s), 0.12, 0.18, this.ctx!.currentTime + i * 0.08)); break;
       case 'win': [0, 4, 7, 12, 16].forEach((s, i) => this.tone('square', N(s - 5), N(s - 5), 0.2, 0.18, this.ctx!.currentTime + i * 0.13)); break;
       case 'tick': this.tone('square', N(-5), N(-5), 0.09, 0.2); this.tone('square', N(-17), N(-17), 0.12, 0.14); break;
+      case 'coin': this.tone('square', 988, 988, 0.07, 0.2); this.tone('square', 1319, 1319, 0.5, 0.18, this.ctx.currentTime + 0.07); break;
       case 'gameover': [7, 3, 0, -5, -9].forEach((s, i) => this.tone('square', N(s - 5), N(s - 6), 0.32, 0.17, this.ctx!.currentTime + i * 0.26)); break;
     }
   }
@@ -92,8 +95,14 @@ export class AudioManager {
     [7, -1, 11, 14, 19, -1, 17, 16, 14, 11, 8, 11, 7, -1, 7, 8],
   ];
 
+  /** Retener la música (no suena aunque se pida) o soltarla (arranca). */
+  setMusicHold(hold: boolean) {
+    this.musicHold = hold;
+    if (hold) this.stopMusic(); else this.startMusic();
+  }
+
   startMusic() {
-    if (!this.ctx || this.timer !== null) return;
+    if (!this.ctx || this.timer !== null || this.musicHold) return;
     this.step = 0; this.nextT = this.ctx.currentTime + 0.1;
     this.timer = window.setInterval(() => this.schedule(), 40);
   }

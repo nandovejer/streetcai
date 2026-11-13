@@ -5,6 +5,11 @@ Juego de lucha arcade 2D en el navegador (escritorio y móvil), ambientado en C�
 - **Luchadores:** Chapa (El Guerrero), Ares (El Viajero), Alba (El Marinero) y Martín (El Veterano).
 - **Escenarios:** Plaza de las Flores y La Caleta (se elige en la selección, o al azar en cada combate).
 
+## INSERT COIN y modo demo
+
+- La primera pantalla es "INSERT COIN": cualquier tecla o toque echa la moneda (y desbloquea el audio del navegador, así la intro de la portada suena entera). La música espera a que termine la intro. `?coinAt=N` congela la animación para pruebas.
+- Tras 20 s sin tocar nada en la portada arranca un combate de exhibición CPU contra CPU (luchadores y escenario al azar). Cualquier tecla o toque vuelve a la portada. `?screen=demo` lo abre directamente.
+
 ## Portada
 
 Puerta de Tierra de fondo. La primera vez se ve una intro de unos 3 s: la cámara se abre desde la torre, las letras de STREET caen una a una, CAI se estampa con destello, onda y explosión de papelillos, y un brillo recorre el título. Después queda el balanceo en bucle. Enter (o un toque) salta la intro; `?introAt=N` la congela en el frame N para pruebas.
