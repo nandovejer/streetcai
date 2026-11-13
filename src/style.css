@@ -86,15 +86,3 @@ body.touch[data-screen="fight"] #touch {
   body[data-screen="fight"] #sys button { width: 30px; height: 30px; }
 }
 
-/* Pie discreto en la portada: "no hagas clic aquí" (abre el juego, como pulsar Enter) */
-#foot {
-  display: none; position: fixed; left: 0; right: 0; bottom: max(3px, env(safe-area-inset-bottom)); z-index: 6;
-  justify-content: center; pointer-events: none;
-}
-body[data-screen="title"] #foot { display: flex; }
-#btn-nope {
-  pointer-events: auto; background: rgba(5,6,15,.55); border: 0; border-radius: 3px; padding: 4px 8px; cursor: pointer;
-  font: 8px "Press Start 2P", monospace; color: #a8abcf; opacity: .6; letter-spacing: .5px;
-  transition: opacity .2s, color .2s;
-}
-#btn-nope:hover, #btn-nope:focus-visible { opacity: 1; color: #ffd800; outline: none; }

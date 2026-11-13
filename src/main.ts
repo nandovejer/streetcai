@@ -271,13 +271,6 @@ async function boot() {
   };
 
   document.getElementById('btn-pause')!.addEventListener('click', () => act('pause'));
-  // "no hagas clic aquí": abre el juego (desde la portada, como pulsar Enter)
-  document.getElementById('btn-nope')!.addEventListener('click', () => {
-    audio.init(); titleIdle = 0;
-    if (screen !== 'title') return;
-    if (titleIntroPlaying()) skipTitleIntro(r);
-    act('title');
-  });
   document.getElementById('btn-credits')!.addEventListener('click', () => { audio.init(); titleIdle = 0; openStaff(); });
   const btnMute = document.getElementById('btn-mute')!;
   const syncMute = () => {

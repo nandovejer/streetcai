@@ -13,10 +13,6 @@ El botón de la estrella, junto al de pantalla completa, abre el rodillo de cré
 
 Se juega gratis, sin monedas. Al perder contra la CPU, y al acabar cada combate de 2 jugadores, sale la pantalla de CONTINUE como en las recreativas: la cara del ganador a la izquierda, la del derrotado machacado a la derecha y una frase del ganador escribiéndose abajo (en `WIN_QUOTES`, `src/ui/screens.ts`). Enter (o SÍ) repite el combate antes de que la cuenta llegue a 0; si no, GAME OVER.
 
-## Pie de la portada
-
-En la portada, abajo y discreto, hay un botón "no hagas clic aquí" que abre el juego (como pulsar Enter).
-
 ## Modo demo
 
 Tras 20 s sin tocar nada en la portada arranca un combate de exhibición CPU contra CPU (luchadores y escenario al azar). Cualquier tecla o toque vuelve a la portada. `?screen=demo` lo abre directamente.
