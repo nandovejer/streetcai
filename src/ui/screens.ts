@@ -1,5 +1,5 @@
 // Pantallas de menú dibujadas en el canvas: título, selección y resultado.
-import { DIFFICULTY_NAMES, Difficulty, FIGHTERS, FIGHTER_IDS, FighterId, STAGES, STAGE_IDS, StageId, VH, VW } from '../game/data';
+import { DIFFICULTY_NAMES, Difficulty, FIGHTERS, FIGHTER_IDS, FighterId, HOME_STAGE, STAGES, StageId, VH, VW } from '../game/data';
 import { Renderer } from '../render/renderer';
 
 export interface Settings {
@@ -8,74 +8,13 @@ export interface Settings {
   difficulty: Difficulty; twoPlayers: boolean;
   /** En 2 jugadores con ratón/táctil: a quién asigna el siguiente toque en un retrato. */
   pickTurn: 0 | 1;
-  /** Escenario elegido, o al azar en cada combate. */
-  stage: StageId | 'random';
+  /** 'home' = el barrio del rival (como en las recreativas), 'random' = al azar; un StageId lo fuerza (pruebas). */
+  stage: StageId | 'home' | 'random';
 }
-export const STAGE_CHOICES: (StageId | 'random')[] = [...STAGE_IDS, 'random'];
+export const STAGE_CHOICES: ('home' | 'random')[] = ['home', 'random'];
 export interface Button { x: number; y: number; w: number; h: number; label: string; action: string; on?: boolean; kind?: 'card' | 'home' | 'opt' | 'btn' }
 
 const COL_J1 = '#ffd800', COL_J2 = '#3cb8ff';
-
-// ---- INSERT COIN: primera pantalla; la pulsación desbloquea el audio del navegador ----
-export const COIN_DROP = 22, COIN_TO_TITLE = 75;
-
-/** insertedT = frames desde que se echó la moneda (-1 si aún no). */
-export function drawCoin(r: Renderer, insertedT: number, touch: boolean) {
-  r.time++;
-  r.begin();
-  const c = r.ctx, t = r.time;
-  c.fillStyle = '#000'; c.fillRect(-10, -10, VW + 20, VH + 20);
-  // líneas de barrido de monitor
-  c.fillStyle = 'rgba(255,255,255,0.025)';
-  for (let y = 0; y < VH; y += 3) c.fillRect(0, y, VW, 1);
-
-  const inserted = insertedT >= 0;
-  // ranura de la máquina
-  const sx = VW / 2, sy = 262;
-  c.fillStyle = '#2a2a38'; c.fillRect(sx - 40, sy - 22, 80, 44);
-  c.fillStyle = '#4a4a5c'; c.fillRect(sx - 38, sy - 20, 76, 40);
-  const glow = inserted && insertedT >= COIN_DROP ? Math.max(0, 1 - (insertedT - COIN_DROP) / 30) : 0;
-  c.fillStyle = glow > 0 ? `rgb(255,${Math.round(120 + 135 * glow)},60)` : (Math.floor(t / 20) % 2 ? '#ff3020' : '#a01810');
-  c.fillRect(sx - 30, sy - 14, 60, 10);
-  c.fillStyle = '#000'; c.fillRect(sx - 3, sy - 12, 6, 28);
-  r.text('25', sx, sy + 12, 6, '#d8d8e8');
-
-  // moneda: gira en el aire y, al echarla, cae a la ranura
-  let cy = 150, rx = 30 * Math.abs(Math.cos(t * 0.07));
-  if (inserted) {
-    const k = Math.min(1, insertedT / COIN_DROP);
-    cy = 150 + (sy - 8 - 150) * k * k;
-    rx = Math.max(1.5, 30 * (1 - k));
-  }
-  if (!inserted || insertedT < COIN_DROP) {
-    const ry = 30;
-    c.fillStyle = '#7a4a08'; c.beginPath(); c.ellipse(sx, cy, rx + 2, ry + 2, 0, 0, Math.PI * 2); c.fill();
-    const g = c.createLinearGradient(sx - rx, cy - ry, sx + rx, cy + ry);
-    g.addColorStop(0, '#fff3a0'); g.addColorStop(0.45, '#ffc020'); g.addColorStop(1, '#b06a00');
-    c.fillStyle = g; c.beginPath(); c.ellipse(sx, cy, rx, ry, 0, 0, Math.PI * 2); c.fill();
-    if (rx > 12) {
-      c.save(); c.translate(sx, cy); c.scale(rx / 30, 1);
-      c.strokeStyle = 'rgba(122,74,8,0.8)'; c.lineWidth = 2; c.beginPath(); c.arc(0, 0, 22, 0, Math.PI * 2); c.stroke();
-      r.text('SC', 0, 1, 14, '#8a5200', 'center', null);
-      c.restore();
-    }
-  }
-
-  if (!inserted) {
-    if (Math.floor(t / 30) % 2 === 0) r.bigText('INSERT COIN', VW / 2, 66, 26);
-    r.text(touch ? 'TOCA LA PANTALLA' : 'PULSA CUALQUIER TECLA', VW / 2, 306, 8, '#fff');
-  } else {
-    const pop = Math.min(1, Math.max(0, (insertedT - COIN_DROP) / 8));
-    if (pop > 0) {
-      c.save(); c.translate(VW / 2, 66); c.scale(1.6 - 0.6 * pop, 1.6 - 0.6 * pop); c.globalAlpha = pop;
-      r.bigText('¡A JUGAR!', 0, 0, 26); c.restore(); c.globalAlpha = 1;
-    }
-  }
-  r.text(`CREDIT ${inserted && insertedT >= COIN_DROP ? 1 : 0}`, VW - 12, VH - 12, 8, '#fff', 'right');
-  r.text('© 2026 STREET CAI', VW / 2, VH - 12, 6, '#8a8aa0');
-  // fundido a negro antes de la portada
-  if (inserted && insertedT > COIN_TO_TITLE - 20) { c.fillStyle = `rgba(0,0,0,${(insertedT - (COIN_TO_TITLE - 20)) / 20})`; c.fillRect(-10, -10, VW + 20, VH + 20); }
-}
 
 // ---- DEMO: rótulo encima del combate de exhibición ----
 export function drawDemoOverlay(r: Renderer, touch: boolean) {
@@ -86,7 +25,7 @@ export function drawDemoOverlay(r: Renderer, touch: boolean) {
 }
 
 // ---- Portada con intro animada (solo la primera vez) ----
-export interface TitleHooks { play: (sfx: 'punch' | 'heavy' | 'ko' | 'whoosh' | 'special' | 'start' | 'land') => void; say: (text: string) => void; music: () => void }
+export interface TitleHooks { play: (sfx: 'punch' | 'heavy' | 'ko' | 'whoosh' | 'special' | 'start' | 'land' | 'coin') => void; say: (text: string) => void; music: () => void }
 /** Momentos de la intro (en frames a 60 Hz). */
 const INTRO = { tiltEnd: 80, letters: 52, letterGap: 7, letterFall: 13, caiStart: 104, caiHit: 116, shine: 128, shineLen: 30, press: 150, end: 160 };
 const TITLE_Y = [50, 104];
@@ -141,6 +80,61 @@ function bounce(k: number) {
   if (k < 0.6) return (k / 0.6) ** 2;              // caída
   const b = (k - 0.6) / 0.4;                        // rebote corto
   return 1 - Math.sin(b * Math.PI) * 0.12 * (1 - b);
+}
+
+// ---- Botón INSERT COIN de la portada ----
+/** Frames desde que se echó la moneda (-1 = esperando). */
+let coinT = -1;
+const COIN_IN = 14, COIN_DONE = 46;
+/** Echar la moneda (devuelve false si ya estaba echada). */
+export function insertTitleCoin() { if (coinT >= 0) return false; coinT = 0; return true; }
+export function titleCoinDone() { return coinT >= COIN_DONE; }
+export function resetTitleCoin() { coinT = -1; }
+
+function drawCoinButton(r: Renderer, t: number, alpha: number, touch: boolean, hooks?: TitleHooks) {
+  const c = r.ctx;
+  if (coinT >= 0) { coinT++; if (coinT === COIN_IN) hooks?.play('coin'); }
+  const pw = 46, ph = 58, px = Math.round(VW / 2 - pw / 2 + 6), py = 238;
+  const RED = '#ff1a10', lit = coinT >= COIN_IN && Math.floor(coinT / 4) % 2 === 0;
+  c.save(); c.globalAlpha = alpha;
+  // todo el botón un 35 % más grande, centrado
+  const ccx = VW / 2, ccy = py + ph / 2;
+  c.translate(ccx, ccy); c.scale(1.35, 1.35); c.translate(-ccx, -ccy);
+  // sombra y marco rojo
+  c.fillStyle = 'rgba(0,0,0,0.45)'; c.fillRect(px - 9, py + 3, pw + 12, ph + 2);
+  c.fillStyle = RED; c.fillRect(px - 10, py, pw + 10, ph);
+  // ranura vertical a la izquierda
+  c.fillStyle = '#000'; c.fillRect(px - 6, py + 4, 5, ph - 8);
+  // panel negro
+  c.fillStyle = lit ? '#3a0400' : '#000'; c.fillRect(px + 2, py + 3, pw - 5, ph - 6);
+  c.fillStyle = RED;
+  c.fillRect(px + 6, py + 8, pw - 13, 2); c.fillRect(px + 6, py + 12, pw - 13, 2);
+  c.fillRect(px + 6, py + 36, pw - 13, 2); c.fillRect(px + 6, py + 40, pw - 13, 2);
+  r.text('25¢', px + 2 + (pw - 5) / 2, py + 25, 9, lit ? '#ffd0a0' : RED, 'center', null);
+  r.text('PUSH TO', px + 2 + (pw - 5) / 2, py + 47, 4, RED, 'center', null);
+  r.text('START', px + 2 + (pw - 5) / 2, py + 52, 4, RED, 'center', null);
+  // moneda: asoma por la izquierda y, al echarla, se mete en la ranura
+  const k = coinT < 0 ? 0 : Math.min(1, coinT / COIN_IN);
+  const cx = px - 12 + (coinT < 0 ? Math.round(Math.sin(t * 0.12)) : k * k * 10), cy = py + ph / 2;
+  if (k < 1) {
+    c.save();
+    c.beginPath(); c.rect(px - 40, py - 10, 36, ph + 20); c.clip(); // desaparece tras la ranura
+    const w = 14, h = 24, x = Math.round(cx - w / 2), y = Math.round(cy - h / 2);
+    c.fillStyle = '#000'; c.fillRect(x - 1, y + 2, w + 2, h - 4); c.fillRect(x + 1, y, w - 2, h);
+    c.fillStyle = '#e8a000'; c.fillRect(x, y + 3, w, h - 6); c.fillRect(x + 2, y + 1, w - 4, h - 2);
+    c.fillStyle = '#ffd400'; c.fillRect(x + 1, y + 3, w - 4, h - 6); c.fillRect(x + 3, y + 1, w - 7, h - 3);
+    c.fillStyle = '#fff6a0'; c.fillRect(x + 2, y + 4, 2, h - 9);
+    c.fillStyle = '#b07000'; c.fillRect(x + 7, y + 5, 2, h - 10); c.fillRect(x + 9, y + 4, 1, h - 8);
+    c.restore();
+  }
+  c.restore();
+  // texto
+  if (coinT < 0) {
+    if (Math.floor(t / 30) % 2 === 0) { c.globalAlpha = alpha; r.text('INSERT COIN', VW / 2, 330, 12, '#fff', 'center', '#000'); c.globalAlpha = 1; }
+    if (alpha >= 1) r.text(touch ? 'TOCA PARA EMPEZAR' : 'PULSA ENTER', VW / 2, 347, 6, '#ffd800');
+  } else if (coinT >= COIN_IN) {
+    r.text('CREDIT 1', VW / 2, 330, 12, Math.floor(coinT / 4) % 2 ? '#ffd800' : '#fff', 'center', '#000');
+  }
 }
 
 export function drawTitle(r: Renderer, touch: boolean, hooks?: TitleHooks) {
@@ -229,15 +223,10 @@ export function drawTitle(r: Renderer, touch: boolean, hooks?: TitleHooks) {
   // fundido desde negro al principio
   if (f < 30 && !introSkipped) { c.fillStyle = `rgba(0,0,0,${1 - f / 30})`; c.fillRect(-20, -20, VW + 40, VH + 40); }
 
-  // PULSA ENTER
+  // botón INSERT COIN
   if (f >= INTRO.press) {
     if (crossed(INTRO.press)) { hooks?.play('start'); hooks?.music(); }
-    const fade = Math.min(1, (f - INTRO.press) / 15);
-    if (Math.floor(t / 30) % 2 === 0 || f < INTRO.press + 30) {
-      c.globalAlpha = fade;
-      r.text(touch ? 'TOCA PARA EMPEZAR' : 'PULSA ENTER PARA EMPEZAR', VW / 2, 330, 10, '#ffd800');
-      c.globalAlpha = 1;
-    }
+    drawCoinButton(r, t, Math.min(1, (f - INTRO.press) / 15), touch, hooks);
   }
 }
 
@@ -273,7 +262,7 @@ export function selectButtons(s: Settings): Button[] {
   y += 13;
   DIFFICULTY_NAMES.forEach((n, i) => opt(n, 'diff:' + i, s.difficulty === i && !s.twoPlayers));
   y += 13;
-  STAGE_CHOICES.forEach((st) => opt(st === 'random' ? 'AL AZAR' : STAGES[st].short, 'stage:' + st, s.stage === st));
+  STAGE_CHOICES.forEach((st) => opt(st === 'random' ? 'AL AZAR' : 'BARRIO RIVAL', 'stage:' + st, s.stage === st));
   b.push({ x: VW / 2 - 70, y: 336, w: 140, h: 20, label: '¡A LUCHAR!', action: 'fight', kind: 'btn' });
   return b;
 }
@@ -359,6 +348,11 @@ export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
   r.text('ESCENARIO', OPT_X, 109, 6, '#9ab0ff', 'left');
   const bs = selectButtons(s);
   for (const b of bs) if (b.kind === 'opt') drawButton(r, b, 6);
+  // escenario del próximo combate cuando es el barrio del rival
+  if (s.stage === 'home') {
+    const rival = s.twoPlayers ? s.char2 : null;
+    r.text(rival ? STAGES[HOME_STAGE[rival]].name : 'EL DE CADA RIVAL', OPT_X, 158, 5, '#ffd800', 'left');
+  }
   if (!touch) r.text('A/D ELEGIR - E ESCENARIO', OPT_X, 170, 5, '#9ab0ff', 'left');
 
   // columna derecha: estadísticas del J1

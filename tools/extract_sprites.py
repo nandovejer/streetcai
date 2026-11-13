@@ -229,6 +229,10 @@ if __name__ == '__main__':
     STAGES = {
         'plaza': ('documentacion/bg-plaza-flores.png', (0, 0, 1536, 872)),
         'caleta': ('documentacion/bg-caleta.png', (0, 40, 1535, 912)),
+        # Los pies quedan ~60 px (de imagen) sobre el borde inferior del recorte.
+        'candelaria': ('documentacion/bg-candelaria.png', (0, 0, 1672, 925)),
+        'falla': ('documentacion/bg-plazafalla.png', (0, 40, 1536, 912)),
+        'santamaria': ('documentacion/bg-santamaria.png', (0, 68, 1536, 940)),
     }
     for sid, (path, box) in STAGES.items():
         os.makedirs(f'public/assets/stages/{sid}', exist_ok=True)

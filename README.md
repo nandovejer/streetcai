@@ -3,16 +3,15 @@
 Juego de lucha arcade 2D en el navegador (escritorio y móvil), ambientado en Cádiz.
 
 - **Luchadores:** Chapa (El Guerrero), Ares (El Viajero), Alba (El Marinero) y Martín (El Veterano).
-- **Escenarios:** Plaza de las Flores y La Caleta (se elige en la selección, o al azar en cada combate).
+- **Escenarios:** el barrio de cada luchador (Candelaria, Santa María, La Caleta y Teatro Falla) y la Plaza de las Flores. En la selección: "BARRIO RIVAL" (se lucha en el barrio del rival, como en las recreativas) o "AL AZAR" (cualquiera, incluida la Plaza).
 
-## INSERT COIN y modo demo
+## Modo demo
 
-- La primera pantalla es "INSERT COIN": cualquier tecla o toque echa la moneda (y desbloquea el audio del navegador, así la intro de la portada suena entera). La música espera a que termine la intro. `?coinAt=N` congela la animación para pruebas.
-- Tras 20 s sin tocar nada en la portada arranca un combate de exhibición CPU contra CPU (luchadores y escenario al azar). Cualquier tecla o toque vuelve a la portada. `?screen=demo` lo abre directamente.
+Tras 20 s sin tocar nada en la portada arranca un combate de exhibición CPU contra CPU (luchadores y escenario al azar). Cualquier tecla o toque vuelve a la portada. `?screen=demo` lo abre directamente.
 
 ## Portada
 
-Puerta de Tierra de fondo. La primera vez se ve una intro de unos 3 s: la cámara se abre desde la torre, las letras de STREET caen una a una, CAI se estampa con destello, onda y explosión de papelillos, y un brillo recorre el título. Después queda el balanceo en bucle. Enter (o un toque) salta la intro; `?introAt=N` la congela en el frame N para pruebas.
+Puerta de Tierra de fondo. La primera vez se ve una intro de unos 3 s: la cámara se abre desde la torre, las letras de STREET caen una a una, CAI se estampa con destello, onda y explosión de papelillos, y un brillo recorre el título. Después queda el balanceo en bucle y el botón INSERT COIN (ranura de 25¢): Enter o un toque echan la moneda, suena, aparece CREDIT 1 y pasa a la selección. Durante la intro, Enter (o un toque) la salta; `?introAt=N` la congela en el frame N para pruebas.
 
 ## Selección de luchador
 
@@ -83,7 +82,7 @@ tests/                    simulación IA vs IA
 
 Añadir un luchador: lámina nueva + entrada en `tools/extract_sprites.py` y `tools/extract_defeated.py` + entrada en `FIGHTER_IDS`/`FIGHTERS` (`src/game/data.ts`). La selección, el título y el arcade se adaptan solos.
 
-Añadir un escenario: imagen en `documentacion/` + entrada en `STAGES` de `tools/extract_sprites.py` (con su recorte) + entrada en `STAGE_IDS`/`STAGES` (`src/game/data.ts`).
+Añadir un escenario: imagen en `documentacion/` + entrada en `STAGES` de `tools/extract_sprites.py` (con su recorte: los pies quedan ~60 px de imagen sobre el borde inferior) + entrada en `STAGE_IDS`/`STAGES` (`src/game/data.ts`) y, si es el barrio de alguien, en `HOME_STAGE`.
 
 ## Decisiones respecto al plan técnico
 

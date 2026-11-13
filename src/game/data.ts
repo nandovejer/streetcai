@@ -68,6 +68,9 @@ const BASE_MOVES: Record<MoveId, MoveData> = {
 export const FIGHTER_IDS = ['chapa', 'ares', 'alba', 'martin'] as const;
 export type FighterId = (typeof FIGHTER_IDS)[number];
 
+/** Escenario del barrio de cada luchador (el suyo en el mapa de la selección). */
+export const HOME_STAGE: Record<FighterId, StageId> = { chapa: 'candelaria', ares: 'santamaria', alba: 'caleta', martin: 'falla' };
+
 export interface FighterDef {
   id: FighterId;
   name: string;
@@ -123,11 +126,14 @@ export const FIGHTERS: Record<FighterId, FighterDef> = {
 };
 
 /** Escenarios: imagen en public/assets/stages/<id>/bg.webp. */
-export const STAGE_IDS = ['plaza', 'caleta'] as const;
+export const STAGE_IDS = ['plaza', 'caleta', 'candelaria', 'falla', 'santamaria'] as const;
 export type StageId = (typeof STAGE_IDS)[number];
-export const STAGES: Record<StageId, { name: string; short: string; ambient: 'petals' | 'gulls' }> = {
-  plaza: { name: 'PLAZA DE LAS FLORES', short: 'PLAZA', ambient: 'petals' },
-  caleta: { name: 'LA CALETA', short: 'CALETA', ambient: 'gulls' },
+export const STAGES: Record<StageId, { name: string; ambient: 'petals' | 'gulls' }> = {
+  plaza: { name: 'PLAZA DE LAS FLORES', ambient: 'petals' },
+  caleta: { name: 'LA CALETA', ambient: 'gulls' },
+  candelaria: { name: 'PLAZA DE LA CANDELARIA', ambient: 'petals' },
+  falla: { name: 'TEATRO FALLA', ambient: 'petals' },
+  santamaria: { name: 'BARRIO DE SANTA MARIA', ambient: 'petals' },
 };
 
 export type Difficulty = 0 | 1 | 2;

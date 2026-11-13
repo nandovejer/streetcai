@@ -5,13 +5,13 @@ import { loadAssets } from './engine/assets';
 import { AudioManager } from './engine/audio';
 import { InputManager } from './engine/input';
 import { AI } from './game/ai';
-import { Difficulty, FIGHTERS, FIGHTER_IDS, FighterId, STAGE_IDS, StageId, VH, VW } from './game/data';
+import { Difficulty, FIGHTERS, FIGHTER_IDS, FighterId, HOME_STAGE, STAGE_IDS, StageId, VH, VW } from './game/data';
 import { Match } from './game/match';
 import { Renderer } from './render/renderer';
-import { COIN_DROP, COIN_TO_TITLE, CONTINUE_FROM, CONTINUE_SECOND, STAGE_CHOICES, Settings, VERSUS_FRAMES, continueButtons, drawCoin, drawContinue, drawDemoOverlay, drawPause, drawResult, drawSelect, drawTitle, drawVersus, freezeTitleIntro, skipTitleIntro, titleIntroPlaying, hitButton, pauseButtons, resultButtons, selectButtons } from './ui/screens';
+import { CONTINUE_FROM, CONTINUE_SECOND, STAGE_CHOICES, Settings, VERSUS_FRAMES, continueButtons, drawContinue, drawDemoOverlay, drawPause, drawResult, drawSelect, drawTitle, drawVersus, freezeTitleIntro, insertTitleCoin, resetTitleCoin, skipTitleIntro, titleCoinDone, titleIntroPlaying, hitButton, pauseButtons, resultButtons, selectButtons } from './ui/screens';
 import { isTouchDevice, setupTouch } from './ui/touch';
 
-type Screen = 'coin' | 'title' | 'select' | 'versus' | 'fight' | 'result' | 'continue';
+type Screen = 'title' | 'select' | 'versus' | 'fight' | 'result' | 'continue';
 
 async function boot() {
   const canvas = document.getElementById('game') as HTMLCanvasElement;
@@ -29,10 +29,11 @@ async function boot() {
   const r = new Renderer(canvas, assets);
   const input = new InputManager();
   const audio = new AudioManager();
-  const settings: Settings = { char: 'chapa', char2: 'ares', difficulty: 1, twoPlayers: false, pickTurn: 0, stage: 'random' };
+  const settings: Settings = { char: 'chapa', char2: 'ares', difficulty: 1, twoPlayers: false, pickTurn: 0, stage: 'home' };
   let fightStage: StageId = 'plaza';
   const pickStage = () => {
-    fightStage = settings.stage === 'random' ? STAGE_IDS[Math.floor(Math.random() * STAGE_IDS.length)] : settings.stage;
+    fightStage = settings.stage === 'random' ? STAGE_IDS[Math.floor(Math.random() * STAGE_IDS.length)]
+      : settings.stage === 'home' ? HOME_STAGE[rivalId()] : settings.stage;
   };
   // Modo arcade (1P): rivales en orden aleatorio y combate actual.
   let ladder: FighterId[] = [];
@@ -53,11 +54,6 @@ async function boot() {
   let demoMode = false;
   let titleIdle = 0;
   const DEMO_AFTER = 60 * 20, DEMO_MAX = 60 * 45;
-  // INSERT COIN: frames desde que se echó la moneda (-1 = esperando)
-  let coinT = -1;
-  /** Pruebas: ?coinAt=N congela la animación de la moneda en el frame N. */
-  const coinFrozen = params.has('coinAt');
-  if (coinFrozen) coinT = Number(params.get('coinAt'));
   let paused = false;
   let endT = 0;
   // CONTINUE?: contT = frames de cuenta atrás; overT = frames de GAME OVER (-1 mientras cuenta)
@@ -68,6 +64,7 @@ async function boot() {
     screen = s;
     document.body.dataset.screen = s;
     titleIdle = 0;
+    if (s === 'title') resetTitleCoin();
     audio.startMusic();
   };
 
@@ -89,12 +86,6 @@ async function boot() {
     setScreen('fight');
   };
 
-  const insertCoin = () => {
-    if (coinT >= 0) return;
-    audio.setMusicHold(true);
-    audio.init();
-    coinT = 0;
-  };
   const startDemo = () => {
     const ids = [...FIGHTER_IDS].sort(() => Math.random() - 0.5);
     match = new Match(FIGHTERS[ids[0]], FIGHTERS[ids[1]]);
@@ -141,7 +132,7 @@ async function boot() {
     else if (a === 'menu') { paused = false; audio.play('select'); setScreen('select'); }
     else if (a === 'resume') paused = false;
     else if (a === 'pause') { if (screen === 'fight' && match && match.phase !== 'matchEnd') paused = !paused; }
-    else if (a === 'title') { audio.play('start'); setScreen('select'); }
+    else if (a === 'title') { insertTitleCoin(); }
     else if (a === 'continue:yes') { if (overT < 0 && contT > 20) goVersus(); }
     else if (a === 'continue:no') { if (overT < 0) gameOver(); else if (overT > 60) setScreen('title'); }
   };
@@ -151,8 +142,7 @@ async function boot() {
     const b = canvas.getBoundingClientRect();
     const x = ((e.clientX - b.left) / b.width) * VW, y = ((e.clientY - b.top) / b.height) * VH;
     titleIdle = 0;
-    if (screen === 'coin') insertCoin();
-    else if (demoMode) endDemo();
+    if (demoMode) endDemo();
     else if (screen === 'title') { if (titleIntroPlaying()) skipTitleIntro(r); else act('title'); }
     else if (screen === 'select') act(hitButton(selectButtons(settings), x, y));
     else if (screen === 'result') act(hitButton(resultButtons(stage >= ladder.length - 1), x, y));
@@ -164,13 +154,11 @@ async function boot() {
 
   window.addEventListener('keydown', (e) => {
     if (e.repeat) return;
-    if (screen === 'coin') audio.setMusicHold(true);
     audio.init();
     const k = e.code;
     if (k === 'KeyM' && screen !== 'fight') { toggleSound(); return; }
     if (k === 'F2') { r.debug = !r.debug; e.preventDefault(); return; }
     titleIdle = 0;
-    if (screen === 'coin') { insertCoin(); return; }
     if (demoMode) { endDemo(); return; }
     if (screen === 'title') { if (k === 'Enter' || k === 'Space') { if (titleIntroPlaying()) skipTitleIntro(r); else act('title'); } }
     else if (screen === 'select') {
@@ -181,7 +169,7 @@ async function boot() {
       else if (two && k === 'ArrowRight') moveCursor(1, 1);
       else if (!two && (k === 'ArrowUp' || k === 'KeyW')) act('diff:' + Math.max(0, settings.difficulty - 1));
       else if (!two && (k === 'ArrowDown' || k === 'KeyS')) act('diff:' + Math.min(2, settings.difficulty + 1));
-      else if (k === 'KeyE') act('stage:' + STAGE_CHOICES[(STAGE_CHOICES.indexOf(settings.stage) + 1) % STAGE_CHOICES.length]);
+      else if (k === 'KeyE') act('stage:' + STAGE_CHOICES[(STAGE_CHOICES.indexOf(settings.stage as 'home') + 1) % STAGE_CHOICES.length]);
       else if (k === 'Digit2') act('mode:2p');
       else if (k === 'Digit1') act('mode:cpu');
       else if (k === 'Enter' || k === 'Space') act('fight');
@@ -216,7 +204,7 @@ async function boot() {
   }
   btnMute.addEventListener('click', toggleSound);
   // Primer gesto en cualquier parte de la página: arranca el audio (y la música).
-  window.addEventListener('pointerdown', () => { if (screen === 'coin') audio.setMusicHold(true); audio.init(); }, { once: true, capture: true });
+  window.addEventListener('pointerdown', () => audio.init(), { once: true, capture: true });
   const btnFull = document.getElementById('btn-full')!;
   type FsDoc = Document & { webkitFullscreenElement?: Element; webkitExitFullscreen?: () => Promise<void>; webkitFullscreenEnabled?: boolean };
   type FsEl = HTMLElement & { webkitRequestFullscreen?: () => Promise<void> };
@@ -300,8 +288,7 @@ async function boot() {
   const titleHooks = { play: (s: Parameters<AudioManager['play']>[0]) => audio.play(s), say: (txt: string) => audio.say(txt), music: () => audio.setMusicHold(false) };
   const draw = () => {
     r.stage = screen === 'versus' || screen === 'fight' || screen === 'result' ? fightStage : 'plaza';
-    if (screen === 'coin') drawCoin(r, coinT, touch);
-    else if (screen === 'title') drawTitle(r, touch, titleHooks);
+    if (screen === 'title') drawTitle(r, touch, titleHooks);
     else if (screen === 'select') drawSelect(r, settings, touch);
     else if (screen === 'fight' && match) {
       const you = demoMode ? 'CPU' : settings.twoPlayers ? 'J1' : 'TU', other = settings.twoPlayers && !demoMode ? 'J2' : 'CPU';
@@ -364,7 +351,7 @@ async function boot() {
   } else if (params.get('screen') === 'demo') {
     startDemo();
   } else if (params.has('screen')) { if (params.has('2p')) settings.twoPlayers = true; setScreen(params.get('screen') as Screen); }
-  else setScreen('coin');
+  else setScreen('title');
   if (params.has('debug')) r.debug = true;
   if (params.has('introAt')) freezeTitleIntro(Number(params.get('introAt')));
 
@@ -377,12 +364,8 @@ async function boot() {
     while (acc >= STEP && n++ < 5) {
       acc -= STEP;
       if (screen === 'fight' && !paused) { stepFight(); if (demoMode && match && match.frame > DEMO_MAX) endDemo(); }
-      else if (screen === 'coin' && coinT >= 0 && !coinFrozen) {
-        coinT++;
-        if (coinT === 1) audio.play('whoosh');
-        if (coinT === COIN_DROP) audio.play('coin');
-        if (coinT >= COIN_TO_TITLE) setScreen('title');
-      } else if (screen === 'title' && !titleIntroPlaying() && ++titleIdle > DEMO_AFTER) startDemo();
+      else if (screen === 'title' && titleCoinDone()) { audio.play('start'); setScreen('select'); }
+      else if (screen === 'title' && !titleIntroPlaying() && ++titleIdle > DEMO_AFTER) startDemo();
       else if (screen === 'continue') stepContinue();
       else if (screen === 'versus' && !vsFrozen && ++vsT >= VERSUS_FRAMES) startFight();
     }
