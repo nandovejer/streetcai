@@ -58,6 +58,16 @@ También hay soporte básico de mando (Gamepad API). `M` silencia en los menús,
 
 Parámetros de URL para pruebas: `?demo=alba&vs=martin&ff=600` (IA contra IA avanzando 600 frames), `?stage=caleta`, `?debug=1` (cajas), `?touch=1` (fuerza controles táctiles), `?screen=select&2p=1`, `?screen=versus&vst=80` (VS congelado), `?screen=result&final=1`, `?screen=continue&lose=martin`.
 
+## Voces del locutor
+
+Generadas con [Piper TTS](https://github.com/OHF-Voice/piper1-gpl) (código abierto, sin conexión) con la voz `es_ES-sharvard-medium`, locutor masculino de español de España. Las frases están escritas "a la gaditana" para acercar el acento de Cádiz: seseo, eses y erres finales que se comen y expresiones como "picha" o "quillo". Pasan además por un filtro de locutor de recreativa (ffmpeg). Hay 35 MP3 en `public/assets/voice/`, unos 500 KB, y se regeneran con:
+
+```bash
+python tools/generate_voices.py <carpeta con es_ES-sharvard-medium.onnx y .onnx.json>
+```
+
+Licencia de la voz: corpus Sharvard (Aubanel, García Lecumberri, Cooke, Cutugno, Borsky y Wolters), CC-BY 3.0, https://datashare.ed.ac.uk/handle/10283/574.
+
 ## Mecánicas
 
 - Frame data por movimiento (startup / active / recovery / hitstun / blockstun) en `src/game/data.ts`.
@@ -75,6 +85,7 @@ Parámetros de URL para pruebas: `?demo=alba&vs=martin&ff=600` (IA contra IA ava
 documentacion/            láminas originales y plan técnico
 tools/extract_sprites.py  recorta las láminas -> atlas transparente + JSON por luchador, y los fondos
 tools/extract_defeated.py retratos de derrota (pantalla de CONTINUE)
+tools/generate_voices.py  voces del locutor con Piper TTS (requiere piper-tts y ffmpeg)
 tools/extract_map.py      mapa de Cádiz de la selección (borra el cursor pintado; requiere opencv-python-headless)
 public/assets/            atlas, retratos y escenarios generados
 src/game/                 simulación pura (sin DOM): data, fighter, match, ai

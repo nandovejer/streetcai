@@ -28,8 +28,12 @@ async function boot() {
   loading.remove();
 
   const r = new Renderer(canvas, assets);
+  // frases del locutor (MP3 generados con Piper TTS)
+  const voiceIds = ['round1', 'round2', 'round3', 'round4', 'round5', 'fight', 'ko', 'time', 'perfect', 'draw', 'title', 'gameover', 'select', 'continue', 'champion'];
+  for (const a of FIGHTER_IDS) { voiceIds.push(`win_${a}`, `super_${a}`); for (const b of FIGHTER_IDS) if (a !== b) voiceIds.push(`vs_${a}_${b}`); }
   const input = new InputManager();
   const audio = new AudioManager();
+  audio.loadVoices(voiceIds);
   const settings: Settings = { char: 'chapa', char2: 'ares', difficulty: 1, twoPlayers: false, pickTurn: 0, stage: 'home' };
   let fightStage: StageId = 'plaza';
   const pickStage = () => {
@@ -75,7 +79,7 @@ async function boot() {
     vsT = 0;
     setScreen('versus');
     audio.play('start');
-    audio.say(`${FIGHTERS[settings.char].name.toLowerCase()} contra ${FIGHTERS[rivalId()].name.toLowerCase()}`);
+    audio.voice(`vs_${settings.char}_${rivalId()}`);
   };
   const startFight = () => {
     match = new Match(FIGHTERS[settings.char], FIGHTERS[rivalId()]);
@@ -132,7 +136,7 @@ async function boot() {
     else if (a === 'menu') { paused = false; audio.play('select'); setScreen('select'); }
     else if (a === 'resume') paused = false;
     else if (a === 'pause') { if (screen === 'fight' && match && match.phase !== 'matchEnd') paused = !paused; }
-    else if (a === 'title') { if (getCredits() > 0) { audio.play('start'); setScreen('select'); } else { useCredits(1); audio.play('block'); } }
+    else if (a === 'title') { if (getCredits() > 0) { audio.play('start'); audio.voice('select'); setScreen('select'); } else { useCredits(1); audio.play('block'); } }
     else if (a === 'continue:yes') { if (overT < 0 && contT > 20) { if (useCredits(1)) goVersus(); else audio.play('block'); } }
     else if (a === 'coin') { if (addCredit()) audio.play('coin'); if (demoMode) endDemo(); else if (screen === 'title' && titleIntroPlaying()) skipTitleIntro(r); }
     else if (a === 'continue:no') { if (overT < 0) gameOver(); else if (overT > 60) setScreen('title'); }
@@ -242,13 +246,14 @@ async function boot() {
   function startContinue() {
     contT = 0; overT = -1;
     setScreen('continue');
+    audio.voice('continue');
     audio.stopMusic();
     audio.play('tick');
   }
   function gameOver() {
     overT = 0;
     audio.play('gameover');
-    audio.say('Game over');
+    audio.voice('gameover');
   }
   const stepContinue = () => {
     if (overT >= 0) { if (++overT > 240) setScreen('title'); return; }
@@ -266,7 +271,7 @@ async function boot() {
       if (endT > 50) {
         // Si pierde un humano (contra la CPU, o cualquiera en 2 jugadores): ¿CONTINUE?
         if (settings.twoPlayers || m.matchWinner === 1) startContinue();
-        else setScreen('result');
+        else { setScreen('result'); if (stage >= ladder.length - 1) audio.voice('champion'); }
       }
       return;
     }
@@ -275,12 +280,12 @@ async function boot() {
     const wasIntro = m.phase === 'intro';
     m.step([p1, p2]);
     if (wasIntro && m.phase === 'fight') audio.play('start');
-    if (!demoMode && m.phase === 'intro' && m.phaseT === 5) audio.say(`Ronda ${['uno', 'dos', 'tres', 'cuatro', 'cinco'][m.round - 1] || m.round}`);
-    if (!demoMode && m.phase === 'intro' && m.phaseT === 78) audio.say('¡A pelear!');
-    if (m.phase === 'ko' && m.phaseT === 82 && m.roundWinner >= 0) audio.say(m.perfect ? '¡Perfecto!' : `${m.f[m.roundWinner].def.name.toLowerCase()} gana`);
+    if (!demoMode && m.phase === 'intro' && m.phaseT === 5) audio.voice(`round${Math.min(5, m.round)}`);
+    if (!demoMode && m.phase === 'intro' && m.phaseT === 78) audio.voice('fight');
+    if (m.phase === 'ko' && m.phaseT === 82) audio.voice(m.roundWinner < 0 ? 'draw' : m.perfect ? 'perfect' : `win_${m.f[m.roundWinner].def.id}`);
     for (const e of m.events) {
-      if (e.type === 'ko') audio.say(m.message === 'K.O.' ? 'Kei ou' : 'Tiempo');
-      if (e.type === 'super' && e.who !== undefined) { audio.play('guardbreak'); audio.say(m.f[e.who].def.specialName.toLowerCase()); }
+      if (e.type === 'ko') audio.voice(m.message === 'K.O.' ? 'ko' : 'time');
+      if (e.type === 'super' && e.who !== undefined) { audio.play('guardbreak'); audio.voice(`super_${m.f[e.who].def.id}`); }
       if (e.type === 'hit') audio.play(e.heavy ? 'heavy' : e.kick ? 'kick' : 'punch');
       else if (SFX[e.type]) audio.play(SFX[e.type]);
     }
@@ -288,7 +293,7 @@ async function boot() {
     m.events.length = 0;
   };
 
-  const titleHooks = { play: (s: Parameters<AudioManager['play']>[0]) => audio.play(s), say: (txt: string) => audio.say(txt), music: () => audio.setMusicHold(false) };
+  const titleHooks = { play: (s: Parameters<AudioManager['play']>[0]) => audio.play(s), voice: (id: string) => audio.voice(id), music: () => audio.setMusicHold(false) };
   const draw = () => {
     r.stage = screen === 'versus' || screen === 'fight' || screen === 'result' ? fightStage : 'plaza';
     if (screen === 'title') drawTitle(r, touch, titleHooks);

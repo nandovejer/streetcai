@@ -75,15 +75,47 @@ export class AudioManager {
     }
   }
 
-  /** Locutor con la síntesis de voz del navegador (si existe). */
-  say(text: string) {
-    if (this.muted || !this.ctx || !('speechSynthesis' in window)) return;
-    try {
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'es-ES'; u.rate = 1.15; u.pitch = 0.5; u.volume = 0.9;
-      window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
-    } catch { /* sin voz */ }
+  // ---- Locutor: frases pregrabadas con Piper TTS (tools/generate_voices.py) ----
+  private voiceData = new Map<string, Promise<ArrayBuffer | null>>();
+  private voiceBuf = new Map<string, AudioBuffer>();
+  private voiceSrc: AudioBufferSourceNode | null = null;
+
+  /** Descarga las frases (se puede llamar antes del primer gesto; se decodifican al iniciar el audio). */
+  loadVoices(ids: string[]) {
+    const base = import.meta.env.BASE_URL;
+    for (const id of ids) {
+      if (this.voiceData.has(id)) continue;
+      this.voiceData.set(id, fetch(`${base}assets/voice/${id}.mp3`).then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null));
+    }
   }
+
+  private async decodeVoice(id: string): Promise<AudioBuffer | null> {
+    const have = this.voiceBuf.get(id);
+    if (have || !this.ctx) return have || null;
+    const data = await this.voiceData.get(id);
+    if (!data) return null;
+    // decodeAudioData consume el buffer: se le pasa una copia
+    const buf = await this.ctx.decodeAudioData(data.slice(0)).catch(() => null);
+    if (buf) this.voiceBuf.set(id, buf);
+    return buf;
+  }
+
+  /** Dice una frase del locutor (corta la anterior) y baja la música mientras habla. */
+  voice(id: string) {
+    if (!this.ctx || this.muted) return;
+    void this.decodeVoice(id).then((buf) => {
+      if (!buf || !this.ctx || this.muted) return;
+      try { this.voiceSrc?.stop(); } catch { /* ya parada */ }
+      const src = this.ctx.createBufferSource(), g = this.ctx.createGain();
+      src.buffer = buf; g.gain.value = 1.1;
+      src.connect(g); g.connect(this.master); src.start();
+      this.voiceSrc = src;
+      const t = this.ctx.currentTime, mg = this.musicGain.gain;
+      mg.cancelScheduledValues(t); mg.setValueAtTime(mg.value, t);
+      mg.linearRampToValueAtTime(0.1, t + 0.06); mg.setValueAtTime(0.1, t + buf.duration); mg.linearRampToValueAtTime(0.32, t + buf.duration + 0.4);
+    });
+  }
+
 
   // Música: cadencia andaluza (Lam - Sol - Fa - Mi) a 16 pasos por compás.
   private static ROOTS = [-12, -14, -16, -17];

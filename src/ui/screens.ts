@@ -26,7 +26,7 @@ export function drawDemoOverlay(r: Renderer, touch: boolean) {
 }
 
 // ---- Portada con intro animada (solo la primera vez) ----
-export interface TitleHooks { play: (sfx: 'punch' | 'heavy' | 'ko' | 'whoosh' | 'special' | 'start' | 'land' | 'coin') => void; say: (text: string) => void; music: () => void }
+export interface TitleHooks { play: (sfx: 'punch' | 'heavy' | 'ko' | 'whoosh' | 'special' | 'start' | 'land' | 'coin') => void; voice: (id: string) => void; music: () => void }
 /** Momentos de la intro (en frames a 60 Hz). */
 const INTRO = { tiltEnd: 80, letters: 52, letterGap: 7, letterFall: 13, caiStart: 104, caiHit: 116, shine: 128, shineLen: 30, press: 150, end: 160 };
 const TITLE_Y = [50, 104];
@@ -122,7 +122,7 @@ export function drawTitle(r: Renderer, touch: boolean, hooks?: TitleHooks) {
   // CAI: se estampa desde muy grande
   if (crossed(INTRO.caiStart)) hooks?.play('whoosh');
   if (crossed(INTRO.caiHit)) {
-    hooks?.play('heavy'); hooks?.play('ko'); hooks?.say('¡Street Cai!');
+    hooks?.play('heavy'); hooks?.play('ko'); hooks?.voice('title');
     titleShake = 12;
     titleFx.push({ x: VW / 2, y: TITLE_Y[1], life: 22, max: 22, kind: 'ring' });
     r.burstPetals(VW / 2, TITLE_Y[1], 70);
