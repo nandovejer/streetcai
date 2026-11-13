@@ -5,7 +5,7 @@ import { Input } from '../game/fighter';
 /** label = en combate; menu = en los menús. */
 const BUTTONS: { k: keyof Input; label: string; menu: string; cls: string }[] = [
   { k: 'hp', label: 'PF', menu: '1P/2P', cls: 'heavy' }, { k: 'hk', label: 'KF', menu: 'BARRIO', cls: 'heavy' }, { k: 'special', label: 'SP', menu: 'NIVEL', cls: 'sp' },
-  { k: 'lp', label: 'P', menu: 'OK', cls: 'light' }, { k: 'lk', label: 'K', menu: 'ATRAS', cls: 'light' }, { k: 'block', label: 'BLQ', menu: 'CREDITO', cls: 'blk' },
+  { k: 'lp', label: 'P', menu: 'OK', cls: 'light' }, { k: 'lk', label: 'K', menu: 'ATRAS', cls: 'light' }, { k: 'block', label: 'BLQ', menu: 'SONIDO', cls: 'blk' },
 ];
 
 /**

@@ -11,7 +11,6 @@ import { Input } from './game/fighter';
 import { Renderer } from './render/renderer';
 import { CONTINUE_FROM, CONTINUE_SECOND, STAGE_CHOICES, Settings, VERSUS_FRAMES, continueButtons, drawContinue, randomQuote, drawDemoOverlay, drawPause, drawResult, drawSelect, drawTitle, drawVersus, freezeTitleIntro, skipTitleIntro, titleIntroPlaying, hitButton, pauseButtons, resultButtons, selectButtons } from './ui/screens';
 import { isTouchDevice, setupTouch } from './ui/touch';
-import { addCredit, getCredits, useCredits } from './ui/credits';
 import { STAFF_FRAMES, drawStaffRoll } from './ui/staffroll';
 
 type Screen = 'credits' | 'title' | 'select' | 'versus' | 'fight' | 'result' | 'continue';
@@ -146,16 +145,15 @@ async function boot() {
       // no puede repetirse luchador: si coinciden, el J2 pasa al siguiente
       if (settings.char2 === settings.char) settings.char2 = FIGHTER_IDS[(FIGHTER_IDS.indexOf(settings.char) + 1) % FIGHTER_IDS.length];
     }
-    else if (a === 'fight') { if (!useCredits(settings.twoPlayers ? 2 : 1)) { audio.play('block'); return; } ladder = []; goVersus(); }
+    else if (a === 'fight') { ladder = []; goVersus(); }
     else if (a === 'arcade:next') { if (stage < ladder.length - 1) { stage++; goVersus(); } }
-    else if (a === 'arcade:again') { if (!useCredits(1)) { audio.play('block'); return; } ladder = []; goVersus(); }
+    else if (a === 'arcade:again') { ladder = []; goVersus(); }
     else if (a === 'skip') { if (screen === 'versus' && vsT > 20) startFight(); }
     else if (a === 'menu') { paused = false; audio.play('select'); setScreen('select'); }
     else if (a === 'resume') paused = false;
     else if (a === 'pause') { if (screen === 'fight' && match && match.phase !== 'matchEnd') paused = !paused; }
-    else if (a === 'title') { if (getCredits() > 0) { audio.play('start'); audio.voice('select'); setScreen('select'); } else { useCredits(1); audio.play('block'); } }
-    else if (a === 'continue:yes') { if (overT < 0 && contT > 20) { if (useCredits(1)) goVersus(); else audio.play('block'); } }
-    else if (a === 'coin') { if (addCredit()) audio.play('coin'); if (demoMode) endDemo(); else if (screen === 'title' && titleIntroPlaying()) skipTitleIntro(r); }
+    else if (a === 'title') { audio.play('start'); audio.voice('select'); setScreen('select'); }
+    else if (a === 'continue:yes') { if (overT < 0 && contT > 20) goVersus(); }
     else if (a === 'continue:no') { if (overT < 0) gameOver(); else if (overT > 60) setScreen('title'); }
   };
 
@@ -186,7 +184,6 @@ async function boot() {
   /** Teclas de menú (también las usa el panel táctil en vertical). */
   function handleKey(k: string) {
     titleIdle = 0;
-    if (k === 'Digit5' || k === 'Numpad5') { act('coin'); return; }
     if (screen === 'credits') { if (staffT > 30 && (k === 'Enter' || k === 'Space' || k === 'Escape')) closeStaff(); return; }
     if (demoMode) { endDemo(); return; }
     if (screen === 'title') { if (k === 'Enter' || k === 'Space') { if (titleIntroPlaying()) skipTitleIntro(r); else act('title'); } }
@@ -219,17 +216,17 @@ async function boot() {
   }
 
   // Panel táctil fuera del combate (sobre todo en vertical): el joystick mueve el cursor y los botones
-  // hacen de OK / ATRAS / 1P-2P / BARRIO / NIVEL / CREDITO.
-  type PadAct = 'left' | 'right' | 'up' | 'down' | 'ok' | 'back' | 'mode' | 'stage' | 'diff' | 'coin';
+  // hacen de OK / ATRAS / 1P-2P / BARRIO / NIVEL / SONIDO.
+  type PadAct = 'left' | 'right' | 'up' | 'down' | 'ok' | 'back' | 'mode' | 'stage' | 'diff' | 'sound';
   const PAD_NAV: [keyof Input, PadAct][] = [
     ['left', 'left'], ['right', 'right'], ['up', 'up'], ['down', 'down'],
-    ['lp', 'ok'], ['lk', 'back'], ['hp', 'mode'], ['hk', 'stage'], ['special', 'diff'], ['block', 'coin'],
+    ['lp', 'ok'], ['lk', 'back'], ['hp', 'mode'], ['hk', 'stage'], ['special', 'diff'], ['block', 'sound'],
   ];
   const padHeld: Partial<Record<keyof Input, number>> = {};
   const padNav = (a: PadAct) => {
     audio.init(); titleIdle = 0;
     const two = settings.twoPlayers;
-    if (a === 'coin') { act('coin'); return; }
+    if (a === 'sound') { toggleSound(); return; }
     if (demoMode) { endDemo(); return; }
     if (screen === 'fight') { if (paused && a === 'ok') act('resume'); else if (paused && a === 'back') act('menu'); return; }
     if (screen === 'select') {
@@ -254,7 +251,7 @@ async function boot() {
     }
   };
   const PANEL_HINT: Record<string, () => string> = {
-    title: () => (getCredits() > 0 ? 'OK: EMPEZAR' : 'CREDITO: ECHAR UNA MONEDA'),
+    title: () => 'OK: EMPEZAR',
     select: () => (settings.twoPlayers
       ? `JOYSTICK: ELIGE J${settings.pickTurn + 1} · OK: ${settings.pickTurn ? 'A LUCHAR' : 'CONFIRMAR'}\nJ1 ${FIGHTERS[settings.char].name}  VS  J2 ${FIGHTERS[settings.char2].name}`
       : `JOYSTICK: ELEGIR · OK: A LUCHAR\n${FIGHTERS[settings.char].name} · ${DIFFICULTY_NAMES[settings.difficulty]} · ${settings.stage === 'random' ? 'AL AZAR' : 'BARRIO RIVAL'}`),
@@ -274,7 +271,13 @@ async function boot() {
   };
 
   document.getElementById('btn-pause')!.addEventListener('click', () => act('pause'));
-  document.getElementById('btn-coin')!.addEventListener('click', () => { titleIdle = 0; act('coin'); });
+  // "no hagas clic aquí": abre el juego (desde la portada, como pulsar Enter)
+  document.getElementById('btn-nope')!.addEventListener('click', () => {
+    audio.init(); titleIdle = 0;
+    if (screen !== 'title') return;
+    if (titleIntroPlaying()) skipTitleIntro(r);
+    act('title');
+  });
   document.getElementById('btn-credits')!.addEventListener('click', () => { audio.init(); titleIdle = 0; openStaff(); });
   const btnMute = document.getElementById('btn-mute')!;
   const syncMute = () => {

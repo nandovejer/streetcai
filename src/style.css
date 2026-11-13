@@ -27,9 +27,6 @@ body[data-screen="fight"] #btn-credits, body[data-screen="credits"] #btn-credits
 #btn-full.on .ic-exit { display: block; }
 #btn-full.hidden { display: none; }
 #btn-pause { display: none; }
-/* botón de moneda: añade un crédito (en combate no hace falta) */
-#btn-coin .coin { display: block; width: 12px; height: 18px; margin: auto; border-radius: 6px / 9px; background: linear-gradient(90deg, #fff6a0 0 25%, #ffd400 25% 60%, #b07000 60% 75%, #ffd400 75%); box-shadow: 0 0 0 2px #000; }
-body[data-screen="fight"] #btn-coin { display: none; }
 body[data-screen="fight"] #btn-pause { display: block; }
 
 /* Controles táctiles */
@@ -88,3 +85,16 @@ body.touch[data-screen="fight"] #touch {
   body[data-screen="fight"] #sys { top: 17%; flex-direction: column; opacity: .55; }
   body[data-screen="fight"] #sys button { width: 30px; height: 30px; }
 }
+
+/* Pie discreto en la portada: "no hagas clic aquí" (abre el juego, como pulsar Enter) */
+#foot {
+  display: none; position: fixed; left: 0; right: 0; bottom: max(3px, env(safe-area-inset-bottom)); z-index: 6;
+  justify-content: center; pointer-events: none;
+}
+body[data-screen="title"] #foot { display: flex; }
+#btn-nope {
+  pointer-events: auto; background: rgba(5,6,15,.55); border: 0; border-radius: 3px; padding: 4px 8px; cursor: pointer;
+  font: 8px "Press Start 2P", monospace; color: #a8abcf; opacity: .6; letter-spacing: .5px;
+  transition: opacity .2s, color .2s;
+}
+#btn-nope:hover, #btn-nope:focus-visible { opacity: 1; color: #ffd800; outline: none; }

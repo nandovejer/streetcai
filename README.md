@@ -9,9 +9,13 @@ Juego de lucha arcade 2D en el navegador (escritorio y móvil), ambientado en C�
 
 El botón de la estrella, junto al de pantalla completa, abre el rodillo de créditos al estilo de las recreativas: reparto, escenarios, voz, licencias y agradecimientos, con los luchadores desfilando abajo. También pasa solo unos segundos después de ganar el arcade. Enter, Esc o un toque lo cierran. El texto se edita en `src/ui/staffroll.ts`.
 
-## Créditos (monedas)
+## CONTINUE
 
-Como en una recreativa: la tecla `5` (o el botón de moneda en móvil) añade un crédito, hasta 9. Empezar cuesta 1 crédito en 1P y 2 en 2 jugadores; ganar y pasar al siguiente rival es gratis; continuar tras perder cuesta 1. La pantalla de CONTINUE, como en las recreativas, muestra la cara del ganador a la izquierda, la del derrotado machacado a la derecha y una frase del ganador escribiéndose abajo (en `WIN_QUOTES`, `src/ui/screens.ts`); sale al perder contra la CPU y al acabar cada combate de 2 jugadores. Sin créditos, la cuenta atrás de CONTINUE sigue corriendo y se puede echar uno antes de que llegue a 0. Al cargar la página hay 1 crédito de regalo; los créditos no se guardan al recargar.
+Se juega gratis, sin monedas. Al perder contra la CPU, y al acabar cada combate de 2 jugadores, sale la pantalla de CONTINUE como en las recreativas: la cara del ganador a la izquierda, la del derrotado machacado a la derecha y una frase del ganador escribiéndose abajo (en `WIN_QUOTES`, `src/ui/screens.ts`). Enter (o SÍ) repite el combate antes de que la cuenta llegue a 0; si no, GAME OVER.
+
+## Pie de la portada
+
+En la portada, abajo y discreto, hay un botón "no hagas clic aquí" que abre el juego (como pulsar Enter).
 
 ## Modo demo
 
@@ -19,7 +23,7 @@ Tras 20 s sin tocar nada en la portada arranca un combate de exhibición CPU con
 
 ## Portada
 
-Puerta de Tierra de fondo. La primera vez se ve una intro de unos 3 s: la cámara se abre desde la torre, las letras de STREET caen una a una, CAI se estampa con destello, onda y explosión de papelillos, y un brillo recorre el título. Después queda el balanceo en bucle con INSERT COIN (sin créditos) o PULSA ENTER (con créditos). Durante la intro, Enter (o un toque) la salta; `?introAt=N` la congela en el frame N para pruebas.
+Puerta de Tierra de fondo. La primera vez se ve una intro de unos 3 s: la cámara se abre desde la torre, las letras de STREET caen una a una, CAI se estampa con destello, onda y explosión de papelillos, y un brillo recorre el título. Después queda el balanceo en bucle con PULSA ENTER. Durante la intro, Enter (o un toque) la salta; `?introAt=N` la congela en el frame N para pruebas.
 
 ## Selección de luchador
 
@@ -48,7 +52,7 @@ Para jugar en el móvil: mismo wifi, abrir `http://<IP-del-PC>:5173`. Se puede a
 Se detecta como móvil o tablet si el puntero principal es el dedo (`pointer: coarse`) o el navegador se anuncia como móvil; un portátil con pantalla táctil sigue con teclado. `?touch=1` lo fuerza.
 
 - **En horizontal:** pantalla completa, con el joystick y los botones superpuestos durante el combate. En los menús se toca directamente en la pantalla.
-- **En vertical:** la pantalla queda arriba y debajo un panel de recreativa, a mano del pulgar, que se ve en todas las pantallas. En combate es el mando (joystick + P, K, PF, KF, SP, BLQ). En los menús los botones cambian de rótulo: el joystick mueve el cursor y los botones hacen de OK, ATRAS, 1P/2P, BARRIO, NIVEL y CREDITO. En 2 jugadores, el primer OK confirma al J1 y pasa al J2. Sobre los botones hay una línea de ayuda según la pantalla: el resumen de lo elegido en la selección y la chuleta de controles en combate.
+- **En vertical:** la pantalla queda arriba y debajo un panel de recreativa, a mano del pulgar, que se ve en todas las pantallas. En combate es el mando (joystick + P, K, PF, KF, SP, BLQ). En los menús los botones cambian de rótulo: el joystick mueve el cursor y los botones hacen de OK, ATRAS, 1P/2P, BARRIO, NIVEL y SONIDO. En 2 jugadores, el primer OK confirma al J1 y pasa al J2. Sobre los botones hay una línea de ayuda según la pantalla: el resumen de lo elegido en la selección y la chuleta de controles en combate.
 - La pantalla completa mantiene la orientación con la que se pulsó.
 
 ## Controles

@@ -1,7 +1,6 @@
 // Pantallas de menú dibujadas en el canvas: título, selección y resultado.
 import { DIFFICULTY_NAMES, Difficulty, FIGHTERS, FIGHTER_IDS, FighterId, HOME_STAGE, STAGES, StageId, VH, VW } from '../game/data';
 import { Renderer } from '../render/renderer';
-import { creditDenied, drawCredits, getCredits } from './credits';
 
 export interface Settings {
   /** Luchador del J1 y del J2 (el J2 solo se usa en modo 2 jugadores). */
@@ -169,19 +168,11 @@ export function drawTitle(r: Renderer, touch: boolean, hooks?: TitleHooks) {
   // fundido desde negro al principio
   if (f < 30 && !introSkipped) { c.fillStyle = `rgba(0,0,0,${1 - f / 30})`; c.fillRect(-20, -20, VW + 40, VH + 40); }
 
-  // créditos: sin créditos pide moneda; con créditos invita a empezar
+  // invitación a empezar
   if (f >= INTRO.press) {
     if (crossed(INTRO.press)) { hooks?.play('start'); hooks?.music(); }
-    const fade = Math.min(1, (f - INTRO.press) / 15);
-    c.globalAlpha = fade;
-    const n = getCredits(), denied = creditDenied();
-    if (n === 0) {
-      if (denied || Math.floor(t / 30) % 2 === 0) r.text('INSERT COIN', VW / 2, 318, 14, denied ? '#ff3b1f' : '#fff', 'center', '#000');
-      r.text(touch ? 'TOCA LA MONEDA PARA AÑADIR CREDITO' : 'PULSA 5 PARA AÑADIR CREDITO', VW / 2, 338, 6, '#ffd800');
-    } else if (Math.floor(t / 30) % 2 === 0) {
-      r.text(touch ? 'TOCA PARA EMPEZAR' : 'PULSA ENTER PARA EMPEZAR', VW / 2, 322, 10, '#ffd800');
-    }
-    drawCredits(r);
+    c.globalAlpha = Math.min(1, (f - INTRO.press) / 15);
+    if (Math.floor(t / 30) % 2 === 0) r.text(touch ? 'TOCA PARA EMPEZAR' : 'PULSA ENTER PARA EMPEZAR', VW / 2, 322, 10, '#ffd800');
     c.globalAlpha = 1;
   }
 }
@@ -343,9 +334,6 @@ export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
     if (p2) { drawCorners(r, b.x - 1, b.y - 1, b.w + 2, b.h + 2, blink ? '#fff' : COL_J2, 7); r.text('2P', b.x + b.w - 9, b.y + 7, 6, COL_J2); }
   }
   for (const b of bs) if (b.kind === 'btn') drawButton(r, b, 9);
-  const cost = s.twoPlayers ? 2 : 1;
-  if (creditDenied()) r.text(`FALTAN CREDITOS (${cost})`, VW / 2, 329, 6, '#ff3b1f');
-  drawCredits(r, VW - 8, VH - 8);
 }
 
 // ---- VS: presentación del combate ----
@@ -411,8 +399,6 @@ export function drawResult(r: Renderer, winnerId: FighterId, loserId: FighterId,
   r.text(score, VW / 2, 262, final ? 9 : 12, final ? '#ffd800' : '#fff');
   if (final) r.text('CAMPEON DE LA PLAZA DE LAS FLORES', VW / 2, 280, 7, '#fff');
   for (const b of resultButtons(final)) drawButton(r, b, 10);
-  if (final && creditDenied()) r.text('INSERTA CREDITO PARA JUGAR OTRA VEZ', VW / 2, 340, 6, '#ff3b1f');
-  drawCredits(r);
 }
 
 // ---- CONTINUE? (cuando pierde un jugador humano) ----
@@ -557,14 +543,9 @@ export function drawContinue(r: Renderer, winnerId: FighterId, loserId: FighterI
   if (overT < 0) {
     gradText(r, 'CONTINUE?', 330, 40, 18, '#ffd060', '#ff6a00');
     drawBulbs(r, String(count), 508, 22, 5, 1 - inSec * 0.45);
-    const n = getCredits();
-    gradText(r, `CREDIT ${n}`, 492, 342, 12, n ? '#d8dcff' : '#ffb0a0', n ? '#5a6cff' : '#ff3b1f', 'center');
     const blink = Math.floor(r.time / 20) % 2 === 0;
-    if (n === 0) {
-      if (blink || creditDenied()) r.text('INSERT COIN', 186, 322, 10, creditDenied() ? '#ff3b1f' : '#fff', 'center', '#000');
-      r.text(touch ? 'TOCA LA MONEDA PARA SEGUIR' : 'PULSA 5 PARA AÑADIR CREDITO', 186, 340, 6, '#ffd800');
-    } else if (touch) for (const b of continueButtons()) drawButton(r, b, 9);
-    else if (blink) r.text('ENTER = SEGUIR   ESC = ABANDONAR', 186, 336, 6, '#ffd800');
+    if (touch) for (const b of continueButtons()) drawButton(r, b, 9);
+    else if (blink) r.text('ENTER = SEGUIR   ESC = ABANDONAR', VW / 2, 336, 7, '#ffd800');
   } else {
     c.fillStyle = `rgba(0,0,0,${Math.min(0.55, overT / 60)})`; c.fillRect(0, 0, VW, VH);
     c.globalAlpha = Math.min(1, overT / 30);
