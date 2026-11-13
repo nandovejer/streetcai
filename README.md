@@ -5,6 +5,10 @@ Juego de lucha arcade 2D en el navegador (escritorio y móvil), ambientado en C�
 - **Luchadores:** Chapa (El Guerrero), Ares (El Viajero), Alba (El Marinero) y Martín (El Veterano).
 - **Escenarios:** Plaza de las Flores y La Caleta (se elige en la selección, o al azar en cada combate).
 
+## Selección de luchador
+
+Al estilo de las recreativas: arriba el mapa de Cádiz con el barrio de cada luchador (Chapa en la Torre Tavira, Ares en la Plaza de España, Alba en La Viña y Martín en Puertas de Tierra). El cursor 1P (y 2P) se desliza por el mapa al cambiar de luchador. Abajo, el retrato grande del elegido y la fila de caras; las opciones de modo, dificultad y escenario van en la esquina del mar. Se puede elegir tocando la cara o el barrio en el mapa.
+
 ## Modos
 
 - **1P Arcade:** eliges luchador y te enfrentas a los otros tres en orden aleatorio, con pantalla de VS antes de cada combate. Si pierdes, CONTINUE repite el mismo rival; si ganas a los tres, eres campeón.
@@ -36,7 +40,7 @@ Para jugar en el móvil: mismo wifi, abrir `http://<IP-del-PC>:5173`. Se puede a
 | Dash | Doble toque adelante / atrás | | | Doble toque |
 | Pausa | Esc / P | | | botón II |
 
-En la selección: A/D (o flechas en 1P) mueven el cursor del J1, las flechas el del J2 en modo 2 jugadores, arriba/abajo cambian la dificultad, `E` cambia el escenario y Enter empieza. Con ratón o táctil, en 2 jugadores cada toque en un retrato elige alternando J1 y J2.
+En la selección: A/D (o flechas en 1P) mueven el cursor del J1, las flechas el del J2 en modo 2 jugadores, arriba/abajo cambian la dificultad, `E` cambia el escenario y Enter empieza. Con ratón o táctil, en 2 jugadores cada toque en un retrato o barrio elige alternando J1 y J2. La ayuda de controles aparece en la pantalla de VS antes de cada combate.
 
 También hay soporte básico de mando (Gamepad API). `M` silencia en los menús, `F2` muestra hitboxes/hurtboxes.
 
@@ -59,6 +63,7 @@ Parámetros de URL para pruebas: `?demo=alba&vs=martin&ff=600` (IA contra IA ava
 documentacion/            láminas originales y plan técnico
 tools/extract_sprites.py  recorta las láminas -> atlas transparente + JSON por luchador, y los fondos
 tools/extract_defeated.py retratos de derrota (pantalla de CONTINUE)
+tools/extract_map.py      mapa de Cádiz de la selección (borra el cursor pintado; requiere opencv-python-headless)
 public/assets/            atlas, retratos y escenarios generados
 src/game/                 simulación pura (sin DOM): data, fighter, match, ai
 src/engine/               assets, input (teclado/táctil/mando), audio sintetizado

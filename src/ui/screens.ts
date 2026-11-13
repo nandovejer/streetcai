@@ -12,7 +12,7 @@ export interface Settings {
   stage: StageId | 'random';
 }
 export const STAGE_CHOICES: (StageId | 'random')[] = [...STAGE_IDS, 'random'];
-export interface Button { x: number; y: number; w: number; h: number; label: string; action: string; on?: boolean }
+export interface Button { x: number; y: number; w: number; h: number; label: string; action: string; on?: boolean; kind?: 'card' | 'home' | 'opt' | 'btn' }
 
 const COL_J1 = '#ffd800', COL_J2 = '#3cb8ff';
 /** Color de acento por luchador (nombres en título y VS). */
@@ -38,17 +38,40 @@ export function drawTitle(r: Renderer, touch: boolean) {
   FIGHTER_IDS.forEach((id, i) => r.text(FIGHTERS[id].name, XS[i], 346, 8, ACCENT[id]));
 }
 
-const CARD = 86, CARD_GAP = 16, CARD_Y = 40;
+// ---- Selección de luchador: mapa de Cádiz al estilo de las recreativas ----
+/** Mapa (public/assets/ui/map-cadiz.webp) dibujado en pantalla; coordenadas del original 1536×1024. */
+const MAP_X = 120, MAP_Y = -4, MAP_W = 400, MAP_H = MAP_W * 1024 / 1536;
+const mapPt = (x: number, y: number): [number, number] => [MAP_X + (x * MAP_W) / 1536, MAP_Y + (y * MAP_H) / 1024];
+/** Barrio de cada luchador en el mapa. */
+export const HOMES: Record<FighterId, { x: number; y: number; place: string }> = {
+  chapa: { x: 662, y: 440, place: 'TORRE TAVIRA' },
+  ares: { x: 1065, y: 268, place: 'PLAZA DE ESPAÑA' },
+  alba: { x: 585, y: 556, place: 'LA VIÑA' },
+  martin: { x: 1135, y: 690, place: 'PUERTAS DE TIERRA' },
+};
+const CARD = 56, CARD_GAP = 6, CARD_Y = 270;
 const cardX = (i: number) => (VW - (FIGHTER_IDS.length * CARD + (FIGHTER_IDS.length - 1) * CARD_GAP)) / 2 + i * (CARD + CARD_GAP);
+const OPT_X = 6, OPT_W = 108;
+/** Posición animada de los cursores sobre el mapa (se deslizan de un barrio a otro). */
+const mapCursor: [number, number][] = [[0, 0], [0, 0]];
+let mapCursorInit = false;
 
 export function selectButtons(s: Settings): Button[] {
   const b: Button[] = [];
-  FIGHTER_IDS.forEach((id, i) => b.push({ x: cardX(i), y: CARD_Y, w: CARD, h: CARD, label: '', action: 'char:' + id, on: s.char === id || (s.twoPlayers && s.char2 === id) }));
-  DIFFICULTY_NAMES.forEach((n, i) => b.push({ x: 176 + i * 100, y: 206, w: 92, h: 20, label: n, action: 'diff:' + i, on: s.difficulty === i && !s.twoPlayers }));
-  b.push({ x: 176, y: 232, w: 142, h: 20, label: '1P ARCADE', action: 'mode:cpu', on: !s.twoPlayers });
-  b.push({ x: 326, y: 232, w: 142, h: 20, label: '2 JUGADORES', action: 'mode:2p', on: s.twoPlayers });
-  STAGE_CHOICES.forEach((st, i) => b.push({ x: 176 + i * 100, y: 258, w: 92, h: 20, label: st === 'random' ? 'AL AZAR' : STAGES[st].short, action: 'stage:' + st, on: s.stage === st }));
-  b.push({ x: 230, y: 286, w: 180, h: 30, label: '¡A LUCHAR!', action: 'fight' });
+  FIGHTER_IDS.forEach((id, i) => {
+    b.push({ x: cardX(i), y: CARD_Y, w: CARD, h: CARD, label: '', action: 'char:' + id, kind: 'card', on: s.char === id || (s.twoPlayers && s.char2 === id) });
+    const [hx, hy] = mapPt(HOMES[id].x, HOMES[id].y);
+    b.push({ x: hx - 12, y: hy - 12, w: 24, h: 24, label: '', action: 'char:' + id, kind: 'home' });
+  });
+  let y = 14;
+  const opt = (label: string, action: string, on: boolean) => { b.push({ x: OPT_X, y, w: OPT_W, h: 13, label, action, on, kind: 'opt' }); y += 15; };
+  opt('1P ARCADE', 'mode:cpu', !s.twoPlayers);
+  opt('2 JUGADORES', 'mode:2p', s.twoPlayers);
+  y += 13;
+  DIFFICULTY_NAMES.forEach((n, i) => opt(n, 'diff:' + i, s.difficulty === i && !s.twoPlayers));
+  y += 13;
+  STAGE_CHOICES.forEach((st) => opt(st === 'random' ? 'AL AZAR' : STAGES[st].short, 'stage:' + st, s.stage === st));
+  b.push({ x: VW / 2 - 70, y: 336, w: 140, h: 20, label: '¡A LUCHAR!', action: 'fight', kind: 'btn' });
   return b;
 }
 
@@ -60,78 +83,118 @@ function drawButton(r: Renderer, b: Button, size = 8) {
   if (b.label) r.text(b.label, b.x + b.w / 2, b.y + b.h / 2 + 1, size, b.on ? '#ffe86b' : '#d8d8e8');
 }
 
-function drawStats(r: Renderer, id: FighterId, sx: number, head: string, headColor: string) {
+function drawStats(r: Renderer, id: FighterId, sx: number, y0: number, head: string, headColor: string) {
   const c = r.ctx, d = FIGHTERS[id];
-  r.text(head, sx, 50, 7, headColor, 'left');
+  r.text(head, sx, y0, 7, headColor, 'left');
   const rows: [string, number][] = [['FUERZA', d.stats.fuerza], ['VELOC.', d.stats.velocidad], ['TECNICA', d.stats.tecnica], ['AGUANTE', d.stats.aguante]];
   rows.forEach(([n, v], k) => {
-    const yy = 68 + k * 20;
+    const yy = y0 + 16 + k * 19;
     r.text(n, sx, yy, 6, '#fff', 'left');
     for (let j = 0; j < 5; j++) { c.fillStyle = '#000'; c.fillRect(sx + j * 12 - 1, yy + 6, 11, 7); c.fillStyle = j < v ? '#ffb400' : '#33334a'; c.fillRect(sx + j * 12, yy + 7, 9, 5); }
   });
-  r.text('ESPECIAL', sx, 152, 6, '#fff', 'left');
-  r.text(d.specialName, sx, 164, 7, '#ff7a50', 'left');
+  r.text('ESPECIAL', sx, y0 + 96, 6, '#fff', 'left');
+  r.text(d.specialName, sx, y0 + 108, 7, '#ff7a50', 'left');
+}
+
+/** Retrato grande sin marco, apoyado en el borde inferior (como en la selección de las recreativas). */
+function drawBigPortrait(r: Renderer, id: FighterId, side: 0 | 1, label: string, col: string) {
+  const c = r.ctx, img = r.assets.portrait[id];
+  const h = 132, w = (img.width * h) / img.height;
+  c.save(); c.imageSmoothingEnabled = true;
+  if (side === 0) c.drawImage(img, -4, VH - h, w, h);
+  else { c.translate(VW + 4, VH - h); c.scale(-1, 1); c.drawImage(img, 0, 0, w, h); }
+  c.restore();
+  const tx = side === 0 ? 8 : VW - 8, al = side === 0 ? 'left' : 'right';
+  r.text(label, tx, VH - h - 34, 9, col, al);
+  gradText(r, FIGHTERS[id].name, tx, VH - h - 18, 15, '#ffd060', '#ff5a00', al);
+  r.text(HOMES[id].place, tx, VH - h - 4, 6, '#fff', al);
+}
+
+function drawCorners(r: Renderer, x: number, y: number, w: number, h: number, col: string, len = 5) {
+  const c = r.ctx;
+  for (const [cx, cy, dx, dy] of [[x, y, 1, 1], [x + w, y, -1, 1], [x, y + h, 1, -1], [x + w, y + h, -1, -1]]) {
+    c.fillStyle = '#000';
+    c.fillRect(cx - (dx < 0 ? len + 1 : 1), cy - (dy < 0 ? 3 : 1), len + 2, 4);
+    c.fillRect(cx - (dx < 0 ? 3 : 1), cy - (dy < 0 ? len + 1 : 1), 4, len + 2);
+    c.fillStyle = col;
+    c.fillRect(cx - (dx < 0 ? len : 0), cy - (dy < 0 ? 2 : 0), len, 2);
+    c.fillRect(cx - (dx < 0 ? 2 : 0), cy - (dy < 0 ? len : 0), 2, len);
+  }
 }
 
 export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
   r.time++;
   r.begin();
-  r.drawStage(40, 0.72);
-  const c = r.ctx;
-  r.bigText('ELIGE TU LUCHADOR', VW / 2, 20, 16);
-  const blink = Math.floor(r.time / 10) % 2 === 0;
-  for (const b of selectButtons(s)) {
-    if (b.action.startsWith('char:')) {
-      const id = b.action.slice(5) as FighterId, d = FIGHTERS[id];
-      const p1 = s.char === id, p2 = s.twoPlayers && s.char2 === id;
-      const frame = p1 ? (blink ? '#fff' : COL_J1) : p2 ? (blink ? '#fff' : COL_J2) : '#55556a';
-      c.fillStyle = '#000'; c.fillRect(b.x - 5, b.y - 5, b.w + 10, b.h + 10);
-      c.fillStyle = frame; c.fillRect(b.x - 3, b.y - 3, b.w + 6, b.h + 6);
-      r.drawPortrait(id, b.x, b.y, b.w);
-      if (!p1 && !p2) { c.fillStyle = 'rgba(0,0,20,0.5)'; c.fillRect(b.x, b.y, b.w, b.h); }
-      if (p1) r.text(s.twoPlayers ? 'J1' : 'TU', b.x + 12, b.y + 10, 7, COL_J1);
-      if (p2) r.text('J2', b.x + b.w - 12, b.y + 10, 7, COL_J2);
-      r.text(d.name, b.x + b.w / 2, b.y + b.h + 14, 9, p1 ? COL_J1 : p2 ? COL_J2 : '#fff');
-      r.text(d.title, b.x + b.w / 2, b.y + b.h + 28, 5, '#b8c8ff');
-    } else drawButton(r, b, b.action === 'fight' ? 12 : 7);
+  const c = r.ctx, t = r.time;
+  // mar de fondo y mapa
+  c.fillStyle = '#00034a'; c.fillRect(-10, -10, VW + 20, VH + 20);
+  c.save(); c.imageSmoothingEnabled = true;
+  c.drawImage(r.assets.map, MAP_X, MAP_Y, MAP_W, MAP_H);
+  c.restore();
+  const blink = Math.floor(t / 10) % 2 === 0;
+  const players: [FighterId, string, string][] = [[s.char, s.twoPlayers ? '1P' : 'TU', COL_J1]];
+  if (s.twoPlayers) players.push([s.char2, '2P', COL_J2]);
+
+  // barrios: punto en cada uno y cursores deslizándose por el mapa
+  for (const id of FIGHTER_IDS) {
+    const [hx, hy] = mapPt(HOMES[id].x, HOMES[id].y);
+    c.fillStyle = '#000'; c.beginPath(); c.arc(hx, hy, 3.5, 0, Math.PI * 2); c.fill();
+    c.fillStyle = Math.floor(t / 20) % 2 ? '#fff' : '#ffe27a'; c.beginPath(); c.arc(hx, hy, 2.2, 0, Math.PI * 2); c.fill();
   }
-  // paneles laterales: J1 a la izquierda; J2 o la escalera arcade a la derecha
-  drawStats(r, s.char, 12, s.twoPlayers ? 'J1' : 'TU', COL_J1);
-  const rx = VW - 104;
-  if (s.twoPlayers) drawStats(r, s.char2, rx, 'J2', COL_J2);
+  if (!mapCursorInit) { players.forEach(([id], i) => { mapCursor[i] = mapPt(HOMES[id].x, HOMES[id].y); }); mapCursorInit = true; }
+  players.forEach(([id, label, col], i) => {
+    const [tx, ty] = mapPt(HOMES[id].x, HOMES[id].y), mc = mapCursor[i];
+    mc[0] += (tx - mc[0]) * 0.22; mc[1] += (ty - mc[1]) * 0.22;
+    const sz = 20 + (blink ? 2 : 0), off = s.twoPlayers && s.char === s.char2 ? (i ? 4 : -4) : 0;
+    drawCorners(r, mc[0] - sz / 2 + off, mc[1] - sz / 2, sz, sz, blink ? '#fff' : col);
+    r.text(label, mc[0] + off, mc[1] - sz / 2 - 8 - (blink ? 1 : 0), 8, col);
+  });
+
+  // opciones (mar de la esquina superior izquierda)
+  r.text('MODO', OPT_X, 7, 6, '#9ab0ff', 'left');
+  r.text('DIFICULTAD', OPT_X, 51, 6, '#9ab0ff', 'left');
+  r.text('ESCENARIO', OPT_X, 109, 6, '#9ab0ff', 'left');
+  const bs = selectButtons(s);
+  for (const b of bs) if (b.kind === 'opt') drawButton(r, b, 6);
+  if (!touch) r.text('A/D ELEGIR - E ESCENARIO', OPT_X, 170, 5, '#9ab0ff', 'left');
+
+  // columna derecha: estadísticas del J1
+  const rx = VW - 106;
+  drawStats(r, s.char, rx, 48, s.twoPlayers ? '1P' : 'TU', COL_J1);
+
+  // retratos grandes y rivales
+  drawBigPortrait(r, s.char, 0, s.twoPlayers ? '1P' : 'TU', COL_J1);
+  if (s.twoPlayers) drawBigPortrait(r, s.char2, 1, '2P', COL_J2);
   else {
-    r.text('ARCADE', rx, 50, 7, COL_J2, 'left');
-    r.text('RIVALES', rx, 66, 6, '#fff', 'left');
+    r.text('RIVALES', VW - 8, 236, 7, COL_J2, 'right');
     FIGHTER_IDS.filter((id) => id !== s.char).forEach((id, k) => {
-      const yy = 78 + k * 30;
-      c.fillStyle = '#000'; c.fillRect(rx - 1, yy - 1, 26, 26);
-      r.drawPortrait(id, rx, yy, 24);
-      r.text(FIGHTERS[id].name, rx + 30, yy + 12, 6, '#d8d8e8', 'left');
+      const yy = 248 + k * 26;
+      c.fillStyle = '#000'; c.fillRect(VW - 33, yy - 1, 26, 26);
+      r.drawPortrait(id, VW - 32, yy, 24);
+      r.text(FIGHTERS[id].name, VW - 38, yy + 12, 6, '#d8d8e8', 'right');
     });
   }
-  const mid = s.twoPlayers
-    ? `${FIGHTERS[s.char].name}  VS  ${FIGHTERS[s.char2].name}`
-    : 'VENCE A LOS OTROS TRES LUCHADORES';
-  r.text(mid, VW / 2, 182, 8, s.twoPlayers ? '#fff' : '#ffd800');
-  if (s.twoPlayers && touch) r.text(`TOCA UN RETRATO PARA ELEGIR J${s.pickTurn + 1}`, VW / 2, 195, 6, s.pickTurn ? COL_J2 : COL_J1);
-  r.text('DIFICULTAD', 168, 216, 6, '#fff', 'right');
-  r.text('MODO', 168, 242, 6, '#fff', 'right');
-  r.text('ESCENARIO', 168, 268, 6, '#fff', 'right');
-  if (!touch) {
-    if (s.twoPlayers) {
-      r.text('J1: A/D ELEGIR - WASD + F/G (FLOJOS) T/Y (FUERTES) R BLOQUEO H ESPECIAL', VW / 2, 330, 6, COL_J1);
-      r.text('J2: FLECHAS ELEGIR - FLECHAS + J/K (FLOJOS) U/I (FUERTES) O BLOQUEO L ESPECIAL', VW / 2, 345, 6, COL_J2);
-    } else {
-      r.text('WASD/FLECHAS MOVER - F/G GOLPES FLOJOS - T/Y FUERTES - R BLOQUEO - H ESPECIAL', VW / 2, 330, 6, '#ffd800');
-      r.text('ATRAS = BLOQUEAR - DOBLE TOQUE = DASH - BARRA LLENA + ESPECIAL = SUPER - ESC PAUSA', VW / 2, 345, 6, '#fff');
-    }
-  } else r.text('ATRAS = BLOQUEAR - SP = ESPECIAL (SUPER CON BARRA LLENA) - DOBLE TOQUE = DASH', VW / 2, 336, 6, '#ffd800');
+
+  // fila de caras
+  const head = s.twoPlayers && touch ? `TOCA UN RETRATO PARA ELEGIR ${s.pickTurn ? '2P' : '1P'}` : 'ELIGE TU LUCHADOR';
+  r.text(head, VW / 2, 261, 6, s.twoPlayers && touch ? (s.pickTurn ? COL_J2 : COL_J1) : '#fff');
+  for (const b of bs) {
+    if (b.kind !== 'card') continue;
+    const id = b.action.slice(5) as FighterId;
+    const p1 = s.char === id, p2 = s.twoPlayers && s.char2 === id;
+    c.fillStyle = '#000'; c.fillRect(b.x - 2, b.y - 2, b.w + 4, b.h + 4);
+    r.drawPortrait(id, b.x, b.y, b.w);
+    if (!p1 && !p2) { c.fillStyle = 'rgba(0,0,30,0.45)'; c.fillRect(b.x, b.y, b.w, b.h); }
+    if (p1) { drawCorners(r, b.x - 3, b.y - 3, b.w + 6, b.h + 6, blink ? '#fff' : COL_J1, 9); r.text(s.twoPlayers ? '1P' : 'TU', b.x + 9, b.y + 7, 6, COL_J1); }
+    if (p2) { drawCorners(r, b.x - 1, b.y - 1, b.w + 2, b.h + 2, blink ? '#fff' : COL_J2, 7); r.text('2P', b.x + b.w - 9, b.y + 7, 6, COL_J2); }
+  }
+  for (const b of bs) if (b.kind === 'btn') drawButton(r, b, 9);
 }
 
 // ---- VS: presentación del combate ----
 export const VERSUS_FRAMES = 150;
 
-export function drawVersus(r: Renderer, left: FighterId, right: FighterId, t: number, sub: string, stage: StageId) {
+export function drawVersus(r: Renderer, left: FighterId, right: FighterId, t: number, sub: string, stage: StageId, help: string[] = []) {
   r.time++;
   r.begin();
   const c = r.ctx;
@@ -163,6 +226,7 @@ export function drawVersus(r: Renderer, left: FighterId, right: FighterId, t: nu
     c.restore();
   }
   r.bigText('STREET CAI', VW / 2, 28, 18);
+  if (t > 12 && help.length) help.forEach((h, i) => r.text(h, VW / 2, 296 + i * 11, 5, i ? '#fff' : '#ffd800'));
   if (sub) r.text(sub, VW / 2, 322, 9, '#ffd800');
   r.text(STAGES[stage].name + ' · CADIZ', VW / 2, 342, 7, '#fff');
 }

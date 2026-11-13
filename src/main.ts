@@ -270,7 +270,10 @@ async function boot() {
       drawContinue(r, match.f[1 - match.matchWinner].def.id, contT, overT, touch);
     } else if (screen === 'versus') {
       const sub = settings.twoPlayers ? 'J1  VS  J2' : `RIVAL ${stage + 1} DE ${ladder.length}`;
-      drawVersus(r, settings.char, rivalId(), vsT, sub, fightStage);
+      const help = touch ? ['JOYSTICK MOVER - P/K FLOJOS - PF/KF FUERTES - SP ESPECIAL', 'ATRAS = BLOQUEAR - DOBLE TOQUE = DASH - BARRA LLENA + SP = SUPER']
+        : settings.twoPlayers ? ['1P: WASD + F/G FLOJOS - T/Y FUERTES - R BLOQUEO - H ESPECIAL', '2P: FLECHAS + J/K FLOJOS - U/I FUERTES - O BLOQUEO - L ESPECIAL']
+        : ['WASD/FLECHAS MOVER - F/G FLOJOS - T/Y FUERTES - R BLOQUEO - H ESPECIAL', 'ATRAS = BLOQUEAR - DOBLE TOQUE = DASH - BARRA LLENA + ESPECIAL = SUPER - ESC PAUSA'];
+      drawVersus(r, settings.char, rivalId(), vsT, sub, fightStage, help);
     } else if (screen === 'result' && match) {
       const w = match.matchWinner, win = match.f[w].def.id, lose = match.f[1 - w].def.id;
       const final = stage >= ladder.length - 1;
