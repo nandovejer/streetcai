@@ -44,10 +44,10 @@ const MAP_X = 120, MAP_Y = -4, MAP_W = 400, MAP_H = MAP_W * 1024 / 1536;
 const mapPt = (x: number, y: number): [number, number] => [MAP_X + (x * MAP_W) / 1536, MAP_Y + (y * MAP_H) / 1024];
 /** Barrio de cada luchador en el mapa. */
 export const HOMES: Record<FighterId, { x: number; y: number; place: string }> = {
-  chapa: { x: 662, y: 440, place: 'TORRE TAVIRA' },
-  ares: { x: 1065, y: 268, place: 'PLAZA DE ESPAÑA' },
-  alba: { x: 585, y: 556, place: 'LA VIÑA' },
-  martin: { x: 1135, y: 690, place: 'PUERTAS DE TIERRA' },
+  chapa: { x: 698, y: 172, place: 'LA CANDELARIA' },
+  ares: { x: 1030, y: 786, place: 'SANTA MARIA DEL MAR' },
+  alba: { x: 342, y: 600, place: 'LA CALETA' },
+  martin: { x: 592, y: 346, place: 'TEATRO FALLA' },
 };
 const CARD = 56, CARD_GAP = 6, CARD_Y = 270;
 const cardX = (i: number) => (VW - (FIGHTER_IDS.length * CARD + (FIGHTER_IDS.length - 1) * CARD_GAP)) / 2 + i * (CARD + CARD_GAP);
