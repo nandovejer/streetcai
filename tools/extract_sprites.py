@@ -18,7 +18,7 @@ SOURCES = {
     'chapa_chroma': ('documentacion/fighter-chapa-chroma.png', 'chroma'),
     'ares_dark': ('documentacion/fighter-ares.png', 'dark'),
     'alba': ('documentacion/fighter-alba.png', 'pure'),
-    'martin': ('documentacion/fighter-martin.png', 'pure'),
+    'martin': ('documentacion/fighter-martin-optimo.png', 'pure'),
 }
 
 # fila: (fuente, y0, y1, x0, x1, nframes, escala)
@@ -66,16 +66,18 @@ FIGHTERS = {
         },
     },
     'martin': {
-        'portrait': ('martin', 22, 92, 224, 282),  # (x0, y0, x1, y1)
+        # Lámina regenerada (fighter-martin-optimo.png): colores coherentes y cara definida.
+        # En ella la fila de caminar está dibujada más grande que la de reposo; su escala lo compensa.
+        'portrait': ('martin', 22, 92, 236, 288),  # (x0, y0, x1, y1)
         'rows': {
-            'idle':     ('martin', 46, 182, 530, 1305, 8, 1.06),
-            'walk':     ('martin', 246, 392, 530, 1305, 8, 1.06),
-            'punch':    ('martin', 540, 662, 20, 640, 6, 1.13),
-            'kick':     ('martin', 540, 662, 650, 1345, 6, 1.13),
-            'jump':     ('martin', 670, 822, 20, 640, 6, 1.13),
-            'jumpkick': ('martin', 690, 822, 650, 1370, 6, 1.13),
-            'hit':      ('martin', 856, 962, 20, 640, 6, 1.13),
-            'ko':       ('martin', 856, 962, 650, 1370, 5, 1.13),
+            'idle':     ('martin', 40, 178, 545, 1290, 8, 1.08),
+            'walk':     ('martin', 225, 376, 540, 1300, 8, 0.975),
+            'punch':    ('martin', 532, 664, 15, 640, 6, 1.08),
+            'kick':     ('martin', 532, 664, 650, 1345, 6, 1.08),
+            'jump':     ('martin', 668, 815, 15, 645, 6, 1.08),
+            'jumpkick': ('martin', 668, 815, 655, 1375, 6, 1.08),
+            'hit':      ('martin', 838, 952, 15, 640, 6, 1.08),
+            'ko':       ('martin', 850, 955, 650, 1375, 5, 1.08),
         },
     },
 }
