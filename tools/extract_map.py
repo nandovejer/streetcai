@@ -1,4 +1,4 @@
-"""Prepara el mapa de Cádiz de la pantalla de selección.
+"""Prepara las imágenes de pantallas: mapa de Cádiz (selección) y fondo de la portada.
 Uso: python tools/extract_map.py
 Requiere: pillow, numpy, scipy, opencv-python-headless.
 
@@ -27,3 +27,8 @@ out = Image.fromarray(cv2.cvtColor(out, cv2.COLOR_BGR2RGB))
 out = out.resize((out.width // 2, out.height // 2), Image.LANCZOS)
 out.save(OUT, 'WEBP', quality=90, method=6)
 print(OUT, out.size)
+
+# Portada: Puerta de Tierra recortada a 16:9 (se quita algo de cielo y de empedrado).
+title = Image.open('documentacion/bg-puertatierra.png').convert('RGB').crop((0, 60, 1536, 924))
+title.save('public/assets/ui/title-bg.webp', 'WEBP', quality=90, method=6)
+print('public/assets/ui/title-bg.webp', title.size)

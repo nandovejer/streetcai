@@ -1,5 +1,5 @@
 // Pantallas de menú dibujadas en el canvas: título, selección y resultado.
-import { DIFFICULTY_NAMES, Difficulty, FIGHTERS, FIGHTER_IDS, FighterId, GROUND_Y, STAGES, STAGE_IDS, StageId, VH, VW } from '../game/data';
+import { DIFFICULTY_NAMES, Difficulty, FIGHTERS, FIGHTER_IDS, FighterId, STAGES, STAGE_IDS, StageId, VH, VW } from '../game/data';
 import { Renderer } from '../render/renderer';
 
 export interface Settings {
@@ -15,27 +15,24 @@ export const STAGE_CHOICES: (StageId | 'random')[] = [...STAGE_IDS, 'random'];
 export interface Button { x: number; y: number; w: number; h: number; label: string; action: string; on?: boolean; kind?: 'card' | 'home' | 'opt' | 'btn' }
 
 const COL_J1 = '#ffd800', COL_J2 = '#3cb8ff';
-/** Color de acento por luchador (nombres en título y VS). */
-const ACCENT: Record<FighterId, string> = { chapa: '#ffb400', ares: '#3cb8ff', alba: '#e8eef8', martin: '#d8955a' };
 
 export function drawTitle(r: Renderer, touch: boolean) {
   r.time++;
   r.begin();
-  r.drawStage(40, 0.35);
+  const c = r.ctx, t = r.time;
+  // fondo: Puerta de Tierra, con la torre a la vista sobre el cartel
+  c.save(); c.imageSmoothingEnabled = true;
+  c.drawImage(r.assets.title, 0, 0, VW, VH);
+  c.restore();
+  // velo suave en la franja del cartel para que se lea sobre la muralla
+  const g = c.createLinearGradient(0, 170, 0, 310);
+  g.addColorStop(0, 'rgba(6,8,24,0)'); g.addColorStop(0.5, 'rgba(6,8,24,0.35)'); g.addColorStop(1, 'rgba(6,8,24,0)');
+  c.fillStyle = g; c.fillRect(0, 170, VW, 140);
   r.drawPetals();
-  const t = r.time;
-  const XS = [70, 192, 448, 570];
-  FIGHTER_IDS.forEach((id, i) => {
-    r.drawShadow(XS[i], 44, 7, 0.7);
-    r.drawSprite(id, `idle_${Math.floor(t / 7 + i * 2) % 8}`, XS[i], GROUND_Y, i < 2 ? 1 : -1, 1.12);
-  });
   const bob = Math.sin(t * 0.05) * 3;
-  r.bigText('STREET', VW / 2, 70 + bob, 46);
-  r.bigText('CAI', VW / 2, 124 + bob, 58);
-  r.text('PLAZA DE LAS FLORES · CADIZ', VW / 2, 166, 8, '#fff');
-  r.text('VS', VW / 2, 250, 20, '#ff3b1f');
-  if (Math.floor(t / 30) % 2 === 0) r.text(touch ? 'TOCA PARA EMPEZAR' : 'PULSA ENTER PARA EMPEZAR', VW / 2, 300, 10, '#ffd800');
-  FIGHTER_IDS.forEach((id, i) => r.text(FIGHTERS[id].name, XS[i], 346, 8, ACCENT[id]));
+  r.bigText('STREET', VW / 2, 208 + bob, 46);
+  r.bigText('CAI', VW / 2, 260 + bob, 58);
+  if (Math.floor(t / 30) % 2 === 0) r.text(touch ? 'TOCA PARA EMPEZAR' : 'PULSA ENTER PARA EMPEZAR', VW / 2, 330, 10, '#ffd800');
 }
 
 // ---- Selección de luchador: mapa de Cádiz al estilo de las recreativas ----

@@ -10,6 +10,8 @@ export interface Assets {
   stages: Record<StageId, HTMLImageElement>;
   /** Mapa de Cádiz de la pantalla de selección. */
   map: HTMLImageElement;
+  /** Fondo de la portada (Puerta de Tierra). */
+  title: HTMLImageElement;
 }
 
 const base = import.meta.env.BASE_URL;
@@ -24,7 +26,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 export async function loadAssets(ids: string[]): Promise<Assets> {
-  const out: Assets = { atlas: {}, portrait: {}, defeated: {}, stages: {} as Record<StageId, HTMLImageElement>, map: await loadImage(`${base}assets/ui/map-cadiz.webp`) };
+  const out: Assets = { atlas: {}, portrait: {}, defeated: {}, stages: {} as Record<StageId, HTMLImageElement>, map: await loadImage(`${base}assets/ui/map-cadiz.webp`), title: await loadImage(`${base}assets/ui/title-bg.webp`) };
   await Promise.all(STAGE_IDS.map(async (sid) => { out.stages[sid] = await loadImage(`${base}assets/stages/${sid}/bg.webp`); }));
   await Promise.all(ids.map(async (id) => {
     const dir = `${base}assets/fighters/${id}/`;
