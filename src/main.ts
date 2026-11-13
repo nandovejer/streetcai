@@ -8,8 +8,9 @@ import { AI } from './game/ai';
 import { Difficulty, FIGHTERS, FIGHTER_IDS, FighterId, HOME_STAGE, STAGE_IDS, StageId, VH, VW } from './game/data';
 import { Match } from './game/match';
 import { Renderer } from './render/renderer';
-import { CONTINUE_FROM, CONTINUE_SECOND, STAGE_CHOICES, Settings, VERSUS_FRAMES, continueButtons, drawContinue, drawDemoOverlay, drawPause, drawResult, drawSelect, drawTitle, drawVersus, freezeTitleIntro, insertTitleCoin, resetTitleCoin, skipTitleIntro, titleCoinDone, titleIntroPlaying, hitButton, pauseButtons, resultButtons, selectButtons } from './ui/screens';
+import { CONTINUE_FROM, CONTINUE_SECOND, STAGE_CHOICES, Settings, VERSUS_FRAMES, continueButtons, drawContinue, drawDemoOverlay, drawPause, drawResult, drawSelect, drawTitle, drawVersus, freezeTitleIntro, skipTitleIntro, titleIntroPlaying, hitButton, pauseButtons, resultButtons, selectButtons } from './ui/screens';
 import { isTouchDevice, setupTouch } from './ui/touch';
+import { addCredit, getCredits, useCredits } from './ui/credits';
 
 type Screen = 'title' | 'select' | 'versus' | 'fight' | 'result' | 'continue';
 
@@ -64,7 +65,6 @@ async function boot() {
     screen = s;
     document.body.dataset.screen = s;
     titleIdle = 0;
-    if (s === 'title') resetTitleCoin();
     audio.startMusic();
   };
 
@@ -125,15 +125,16 @@ async function boot() {
     else if (a.startsWith('stage:')) { settings.stage = a.slice(6) as Settings['stage']; audio.play('select'); }
     else if (a === 'mode:cpu') { settings.twoPlayers = false; audio.play('select'); }
     else if (a === 'mode:2p') { settings.twoPlayers = true; audio.play('select'); }
-    else if (a === 'fight') { ladder = []; goVersus(); }
+    else if (a === 'fight') { if (!useCredits(settings.twoPlayers ? 2 : 1)) { audio.play('block'); return; } ladder = []; goVersus(); }
     else if (a === 'arcade:next') { if (stage < ladder.length - 1) { stage++; goVersus(); } }
-    else if (a === 'arcade:again') { ladder = []; goVersus(); }
+    else if (a === 'arcade:again') { if (!useCredits(1)) { audio.play('block'); return; } ladder = []; goVersus(); }
     else if (a === 'skip') { if (screen === 'versus' && vsT > 20) startFight(); }
     else if (a === 'menu') { paused = false; audio.play('select'); setScreen('select'); }
     else if (a === 'resume') paused = false;
     else if (a === 'pause') { if (screen === 'fight' && match && match.phase !== 'matchEnd') paused = !paused; }
-    else if (a === 'title') { insertTitleCoin(); }
-    else if (a === 'continue:yes') { if (overT < 0 && contT > 20) goVersus(); }
+    else if (a === 'title') { if (getCredits() > 0) { audio.play('start'); setScreen('select'); } else { useCredits(1); audio.play('block'); } }
+    else if (a === 'continue:yes') { if (overT < 0 && contT > 20) { if (useCredits(1)) goVersus(); else audio.play('block'); } }
+    else if (a === 'coin') { if (addCredit()) audio.play('coin'); if (demoMode) endDemo(); else if (screen === 'title' && titleIntroPlaying()) skipTitleIntro(r); }
     else if (a === 'continue:no') { if (overT < 0) gameOver(); else if (overT > 60) setScreen('title'); }
   };
 
@@ -159,6 +160,7 @@ async function boot() {
     if (k === 'KeyM' && screen !== 'fight') { toggleSound(); return; }
     if (k === 'F2') { r.debug = !r.debug; e.preventDefault(); return; }
     titleIdle = 0;
+    if (k === 'Digit5' || k === 'Numpad5') { act('coin'); return; }
     if (demoMode) { endDemo(); return; }
     if (screen === 'title') { if (k === 'Enter' || k === 'Space') { if (titleIntroPlaying()) skipTitleIntro(r); else act('title'); } }
     else if (screen === 'select') {
@@ -190,6 +192,7 @@ async function boot() {
   });
 
   document.getElementById('btn-pause')!.addEventListener('click', () => act('pause'));
+  document.getElementById('btn-coin')!.addEventListener('click', () => { titleIdle = 0; act('coin'); });
   const btnMute = document.getElementById('btn-mute')!;
   const syncMute = () => {
     btnMute.classList.toggle('off', audio.muted);
@@ -364,7 +367,6 @@ async function boot() {
     while (acc >= STEP && n++ < 5) {
       acc -= STEP;
       if (screen === 'fight' && !paused) { stepFight(); if (demoMode && match && match.frame > DEMO_MAX) endDemo(); }
-      else if (screen === 'title' && titleCoinDone()) { audio.play('start'); setScreen('select'); }
       else if (screen === 'title' && !titleIntroPlaying() && ++titleIdle > DEMO_AFTER) startDemo();
       else if (screen === 'continue') stepContinue();
       else if (screen === 'versus' && !vsFrozen && ++vsT >= VERSUS_FRAMES) startFight();

@@ -1,6 +1,7 @@
 // Pantallas de menú dibujadas en el canvas: título, selección y resultado.
 import { DIFFICULTY_NAMES, Difficulty, FIGHTERS, FIGHTER_IDS, FighterId, HOME_STAGE, STAGES, StageId, VH, VW } from '../game/data';
 import { Renderer } from '../render/renderer';
+import { creditDenied, drawCredits, getCredits } from './credits';
 
 export interface Settings {
   /** Luchador del J1 y del J2 (el J2 solo se usa en modo 2 jugadores). */
@@ -80,61 +81,6 @@ function bounce(k: number) {
   if (k < 0.6) return (k / 0.6) ** 2;              // caída
   const b = (k - 0.6) / 0.4;                        // rebote corto
   return 1 - Math.sin(b * Math.PI) * 0.12 * (1 - b);
-}
-
-// ---- Botón INSERT COIN de la portada ----
-/** Frames desde que se echó la moneda (-1 = esperando). */
-let coinT = -1;
-const COIN_IN = 14, COIN_DONE = 46;
-/** Echar la moneda (devuelve false si ya estaba echada). */
-export function insertTitleCoin() { if (coinT >= 0) return false; coinT = 0; return true; }
-export function titleCoinDone() { return coinT >= COIN_DONE; }
-export function resetTitleCoin() { coinT = -1; }
-
-function drawCoinButton(r: Renderer, t: number, alpha: number, touch: boolean, hooks?: TitleHooks) {
-  const c = r.ctx;
-  if (coinT >= 0) { coinT++; if (coinT === COIN_IN) hooks?.play('coin'); }
-  const pw = 46, ph = 58, px = Math.round(VW / 2 - pw / 2 + 6), py = 238;
-  const RED = '#ff1a10', lit = coinT >= COIN_IN && Math.floor(coinT / 4) % 2 === 0;
-  c.save(); c.globalAlpha = alpha;
-  // todo el botón un 35 % más grande, centrado
-  const ccx = VW / 2, ccy = py + ph / 2;
-  c.translate(ccx, ccy); c.scale(1.35, 1.35); c.translate(-ccx, -ccy);
-  // sombra y marco rojo
-  c.fillStyle = 'rgba(0,0,0,0.45)'; c.fillRect(px - 9, py + 3, pw + 12, ph + 2);
-  c.fillStyle = RED; c.fillRect(px - 10, py, pw + 10, ph);
-  // ranura vertical a la izquierda
-  c.fillStyle = '#000'; c.fillRect(px - 6, py + 4, 5, ph - 8);
-  // panel negro
-  c.fillStyle = lit ? '#3a0400' : '#000'; c.fillRect(px + 2, py + 3, pw - 5, ph - 6);
-  c.fillStyle = RED;
-  c.fillRect(px + 6, py + 8, pw - 13, 2); c.fillRect(px + 6, py + 12, pw - 13, 2);
-  c.fillRect(px + 6, py + 36, pw - 13, 2); c.fillRect(px + 6, py + 40, pw - 13, 2);
-  r.text('25¢', px + 2 + (pw - 5) / 2, py + 25, 9, lit ? '#ffd0a0' : RED, 'center', null);
-  r.text('PUSH TO', px + 2 + (pw - 5) / 2, py + 47, 4, RED, 'center', null);
-  r.text('START', px + 2 + (pw - 5) / 2, py + 52, 4, RED, 'center', null);
-  // moneda: asoma por la izquierda y, al echarla, se mete en la ranura
-  const k = coinT < 0 ? 0 : Math.min(1, coinT / COIN_IN);
-  const cx = px - 12 + (coinT < 0 ? Math.round(Math.sin(t * 0.12)) : k * k * 10), cy = py + ph / 2;
-  if (k < 1) {
-    c.save();
-    c.beginPath(); c.rect(px - 40, py - 10, 36, ph + 20); c.clip(); // desaparece tras la ranura
-    const w = 14, h = 24, x = Math.round(cx - w / 2), y = Math.round(cy - h / 2);
-    c.fillStyle = '#000'; c.fillRect(x - 1, y + 2, w + 2, h - 4); c.fillRect(x + 1, y, w - 2, h);
-    c.fillStyle = '#e8a000'; c.fillRect(x, y + 3, w, h - 6); c.fillRect(x + 2, y + 1, w - 4, h - 2);
-    c.fillStyle = '#ffd400'; c.fillRect(x + 1, y + 3, w - 4, h - 6); c.fillRect(x + 3, y + 1, w - 7, h - 3);
-    c.fillStyle = '#fff6a0'; c.fillRect(x + 2, y + 4, 2, h - 9);
-    c.fillStyle = '#b07000'; c.fillRect(x + 7, y + 5, 2, h - 10); c.fillRect(x + 9, y + 4, 1, h - 8);
-    c.restore();
-  }
-  c.restore();
-  // texto
-  if (coinT < 0) {
-    if (Math.floor(t / 30) % 2 === 0) { c.globalAlpha = alpha; r.text('INSERT COIN', VW / 2, 330, 12, '#fff', 'center', '#000'); c.globalAlpha = 1; }
-    if (alpha >= 1) r.text(touch ? 'TOCA PARA EMPEZAR' : 'PULSA ENTER', VW / 2, 347, 6, '#ffd800');
-  } else if (coinT >= COIN_IN) {
-    r.text('CREDIT 1', VW / 2, 330, 12, Math.floor(coinT / 4) % 2 ? '#ffd800' : '#fff', 'center', '#000');
-  }
 }
 
 export function drawTitle(r: Renderer, touch: boolean, hooks?: TitleHooks) {
@@ -223,10 +169,20 @@ export function drawTitle(r: Renderer, touch: boolean, hooks?: TitleHooks) {
   // fundido desde negro al principio
   if (f < 30 && !introSkipped) { c.fillStyle = `rgba(0,0,0,${1 - f / 30})`; c.fillRect(-20, -20, VW + 40, VH + 40); }
 
-  // botón INSERT COIN
+  // créditos: sin créditos pide moneda; con créditos invita a empezar
   if (f >= INTRO.press) {
     if (crossed(INTRO.press)) { hooks?.play('start'); hooks?.music(); }
-    drawCoinButton(r, t, Math.min(1, (f - INTRO.press) / 15), touch, hooks);
+    const fade = Math.min(1, (f - INTRO.press) / 15);
+    c.globalAlpha = fade;
+    const n = getCredits(), denied = creditDenied();
+    if (n === 0) {
+      if (denied || Math.floor(t / 30) % 2 === 0) r.text('INSERT COIN', VW / 2, 318, 14, denied ? '#ff3b1f' : '#fff', 'center', '#000');
+      r.text(touch ? 'TOCA LA MONEDA PARA AÑADIR CREDITO' : 'PULSA 5 PARA AÑADIR CREDITO', VW / 2, 338, 6, '#ffd800');
+    } else if (Math.floor(t / 30) % 2 === 0) {
+      r.text(touch ? 'TOCA PARA EMPEZAR' : 'PULSA ENTER PARA EMPEZAR', VW / 2, 322, 10, '#ffd800');
+    }
+    drawCredits(r);
+    c.globalAlpha = 1;
   }
 }
 
@@ -386,6 +342,9 @@ export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
     if (p2) { drawCorners(r, b.x - 1, b.y - 1, b.w + 2, b.h + 2, blink ? '#fff' : COL_J2, 7); r.text('2P', b.x + b.w - 9, b.y + 7, 6, COL_J2); }
   }
   for (const b of bs) if (b.kind === 'btn') drawButton(r, b, 9);
+  const cost = s.twoPlayers ? 2 : 1;
+  if (creditDenied()) r.text(`FALTAN CREDITOS (${cost})`, VW / 2, 329, 6, '#ff3b1f');
+  drawCredits(r, VW - 8, VH - 8);
 }
 
 // ---- VS: presentación del combate ----
@@ -451,6 +410,8 @@ export function drawResult(r: Renderer, winnerId: FighterId, loserId: FighterId,
   r.text(score, VW / 2, 262, final ? 9 : 12, final ? '#ffd800' : '#fff');
   if (final) r.text('CAMPEON DE LA PLAZA DE LAS FLORES', VW / 2, 280, 7, '#fff');
   for (const b of resultButtons(final)) drawButton(r, b, 10);
+  if (final && creditDenied()) r.text('INSERTA CREDITO PARA JUGAR OTRA VEZ', VW / 2, 340, 6, '#ff3b1f');
+  drawCredits(r);
 }
 
 // ---- CONTINUE? (cuando pierde un jugador humano) ----
@@ -529,12 +490,16 @@ export function drawContinue(r: Renderer, loserId: FighterId, t: number, overT: 
   if (overT < 0) {
     gradText(r, 'CONTINUE?', 40, 34, 22, '#ffd060', '#ff6a00');
     gradText(r, String(count), 262, 34, 22, '#ffffff', '#9a9aa8');
-    gradText(r, 'FREE PLAY', 492, 34, 14, '#d8dcff', '#5a6cff', 'center');
+    const n = getCredits();
+    gradText(r, `CREDIT ${n}`, 492, 34, 14, n ? '#d8dcff' : '#ffb0a0', n ? '#5a6cff' : '#ff3b1f', 'center');
     // bombillas: el número "late" al principio de cada segundo
     const glow = 1 - inSec * 0.45;
     drawBulbs(r, String(count), 396, 72, 32, glow);
     const blink = Math.floor(r.time / 20) % 2 === 0;
-    if (touch) for (const b of continueButtons()) drawButton(r, b, 9);
+    if (n === 0) {
+      if (blink || creditDenied()) r.text('INSERT COIN', 186, 296, 12, creditDenied() ? '#ff3b1f' : '#fff', 'center', '#000');
+      r.text(touch ? 'TOCA LA MONEDA PARA SEGUIR' : 'PULSA 5 PARA AÑADIR CREDITO', 186, 334, 6, '#ffd800');
+    } else if (touch) for (const b of continueButtons()) drawButton(r, b, 9);
     else if (blink) r.text('ENTER = SEGUIR   ESC = ABANDONAR', 186, 334, 6, '#ffd800');
   } else {
     const a = Math.min(1, overT / 30);

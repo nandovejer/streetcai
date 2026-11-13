@@ -25,6 +25,9 @@ body { display: flex; align-items: center; justify-content: center; height: 100d
 #btn-full.on .ic-exit { display: block; }
 #btn-full.hidden { display: none; }
 #btn-pause { display: none; }
+/* botón de moneda: añade un crédito (en combate no hace falta) */
+#btn-coin .coin { display: block; width: 12px; height: 18px; margin: auto; border-radius: 6px / 9px; background: linear-gradient(90deg, #fff6a0 0 25%, #ffd400 25% 60%, #b07000 60% 75%, #ffd400 75%); box-shadow: 0 0 0 2px #000; }
+body[data-screen="fight"] #btn-coin { display: none; }
 body[data-screen="fight"] #btn-pause { display: block; }
 
 /* Controles táctiles */

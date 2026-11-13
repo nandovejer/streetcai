@@ -5,13 +5,17 @@ Juego de lucha arcade 2D en el navegador (escritorio y móvil), ambientado en C�
 - **Luchadores:** Chapa (El Guerrero), Ares (El Viajero), Alba (El Marinero) y Martín (El Veterano).
 - **Escenarios:** el barrio de cada luchador (Candelaria, Santa María, La Caleta y Teatro Falla) y la Plaza de las Flores. En la selección: "BARRIO RIVAL" (se lucha en el barrio del rival, como en las recreativas) o "AL AZAR" (cualquiera, incluida la Plaza).
 
+## Créditos
+
+Como en una recreativa: la tecla `5` (o el botón de moneda en móvil) añade un crédito, hasta 9. Empezar cuesta 1 crédito en 1P y 2 en 2 jugadores; ganar y pasar al siguiente rival es gratis; continuar tras perder cuesta 1. Sin créditos, la cuenta atrás de CONTINUE sigue corriendo y se puede echar uno antes de que llegue a 0. Los créditos no se guardan al recargar.
+
 ## Modo demo
 
 Tras 20 s sin tocar nada en la portada arranca un combate de exhibición CPU contra CPU (luchadores y escenario al azar). Cualquier tecla o toque vuelve a la portada. `?screen=demo` lo abre directamente.
 
 ## Portada
 
-Puerta de Tierra de fondo. La primera vez se ve una intro de unos 3 s: la cámara se abre desde la torre, las letras de STREET caen una a una, CAI se estampa con destello, onda y explosión de papelillos, y un brillo recorre el título. Después queda el balanceo en bucle y el botón INSERT COIN (ranura de 25¢): Enter o un toque echan la moneda, suena, aparece CREDIT 1 y pasa a la selección. Durante la intro, Enter (o un toque) la salta; `?introAt=N` la congela en el frame N para pruebas.
+Puerta de Tierra de fondo. La primera vez se ve una intro de unos 3 s: la cámara se abre desde la torre, las letras de STREET caen una a una, CAI se estampa con destello, onda y explosión de papelillos, y un brillo recorre el título. Después queda el balanceo en bucle con INSERT COIN (sin créditos) o PULSA ENTER (con créditos). Durante la intro, Enter (o un toque) la salta; `?introAt=N` la congela en el frame N para pruebas.
 
 ## Selección de luchador
 
