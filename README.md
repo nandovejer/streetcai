@@ -43,6 +43,14 @@ npx tsx tests/balance.ts 40   # equilibrio todos contra todos (40 partidas por c
 
 Para jugar en el móvil: mismo wifi, abrir `http://<IP-del-PC>:5173`. Se puede añadir a la pantalla de inicio (PWA).
 
+## Móvil
+
+Se detecta como móvil o tablet si el puntero principal es el dedo (`pointer: coarse`) o el navegador se anuncia como móvil; un portátil con pantalla táctil sigue con teclado. `?touch=1` lo fuerza.
+
+- **En horizontal:** pantalla completa, con el joystick y los botones superpuestos durante el combate. En los menús se toca directamente en la pantalla.
+- **En vertical:** la pantalla queda arriba y debajo un panel de recreativa, a mano del pulgar, que se ve en todas las pantallas. En combate es el mando (joystick + P, K, PF, KF, SP, BLQ). En los menús los botones cambian de rótulo: el joystick mueve el cursor y los botones hacen de OK, ATRAS, 1P/2P, BARRIO, NIVEL y CREDITO. En 2 jugadores, el primer OK confirma al J1 y pasa al J2. Sobre los botones hay una línea de ayuda según la pantalla: el resumen de lo elegido en la selección y la chuleta de controles en combate.
+- La pantalla completa mantiene la orientación con la que se pulsó.
+
 ## Controles
 
 | Acción | J1 | J1 alternativo (solo 1P) | J2 (modo 2 jugadores) | Táctil |

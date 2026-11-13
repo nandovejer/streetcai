@@ -34,14 +34,15 @@ body[data-screen="fight"] #btn-pause { display: block; }
 
 /* Controles táctiles */
 #touch { display: none; }
+#panel-hint { display: none; }
 body.touch[data-screen="fight"] #touch {
-  display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; pointer-events: none;
-  justify-content: space-between; align-items: flex-end;
+  display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; pointer-events: none;
   padding: 0 max(14px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
 }
+#pad { display: flex; justify-content: space-between; align-items: flex-end; }
 #stick, #btns { pointer-events: auto; touch-action: none; }
 #stick {
-  --s: min(34vh, 150px); width: var(--s); height: var(--s); border-radius: 50%;
+  --s: min(34vh, 150px); width: var(--s); height: var(--s); border-radius: 50%; flex: none;
   background: radial-gradient(circle, rgba(255,255,255,.10) 0 40%, rgba(255,255,255,.22) 41% 100%);
   border: 2px solid rgba(255,255,255,.45); display: flex; align-items: center; justify-content: center;
 }
@@ -52,28 +53,38 @@ body.touch[data-screen="fight"] #touch {
   font: 10px "Press Start 2P", monospace; color: #fff; text-shadow: 1px 1px 0 #000; padding: 0; touch-action: none;
   box-shadow: 0 3px 0 rgba(0,0,0,.6); opacity: .72;
 }
+.tb span { pointer-events: none; }
+.tb .lm { display: none; font-size: 7px; letter-spacing: -.5px; }
 .tb.light { background: #2f7de0; } .tb.heavy { background: #d93a2b; } .tb.sp { background: #e09a00; } .tb.blk { background: #3a9d5d; }
 .tb.down { transform: translateY(3px) scale(.94); box-shadow: none; opacity: 1; filter: brightness(1.4); }
 
-/* Vertical: juego arriba, mandos debajo */
+/* Móvil en vertical: pantalla arriba y debajo un panel de recreativa, a mano del pulgar, en todas las pantallas */
 @media (orientation: portrait) {
-  body { align-items: flex-start; }
-  #wrap { width: 100vw; margin-top: max(44px, env(safe-area-inset-top)); }
-  body.touch[data-screen="fight"] #touch {
-    top: calc(100vw * 9 / 16 + 60px); align-items: center; padding-left: 5vw; padding-right: 5vw;
+  body.touch { align-items: flex-start; }
+  body.touch #wrap { width: 100vw; margin-top: calc(max(6px, env(safe-area-inset-top)) + 44px); }
+  body.touch #touch, body.touch[data-screen="fight"] #touch {
+    display: flex; flex-direction: column; justify-content: space-between; align-items: stretch;
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; pointer-events: none;
+    top: calc(max(6px, env(safe-area-inset-top)) + 52px + 100vw * 9 / 16);
+    padding: 14px 5vw max(28px, calc(env(safe-area-inset-bottom) + 18px));
+    background:
+      linear-gradient(180deg, rgba(255,216,0,.9) 0 3px, #c8261a 3px 6px, transparent 6px),
+      radial-gradient(120% 70% at 50% 100%, #2a1846 0%, #120a22 60%, #07050f 100%);
   }
-  #stick { --s: min(40vw, 170px); }
-  #btns { gap: 2.5vw; }
-  .tb { --b: min(15.5vw, 70px); opacity: .95; }
+  body.touch #panel-hint {
+    display: block; text-align: center; font-size: 8px; line-height: 1.6; color: #ffd800; min-height: 13px;
+    text-shadow: 1px 1px 0 #000; padding-top: 6px; white-space: pre-line;
+  }
+  body.touch[data-screen="fight"] #panel-hint { color: #8d90b8; font-size: 7px; line-height: 2; }
+  body.touch #pad { align-items: center; }
+  body.touch #stick { --s: min(42vw, 180px); }
+  body.touch #btns { gap: 2.6vw; }
+  body.touch .tb { --b: min(16vw, 72px); opacity: .95; }
+  body.touch:not([data-screen="fight"]) .tb .lf { display: none; }
+  body.touch:not([data-screen="fight"]) .tb .lm { display: inline; }
 }
 
 @media (orientation: landscape) {
   body[data-screen="fight"] #sys { top: 17%; flex-direction: column; opacity: .55; }
   body[data-screen="fight"] #sys button { width: 30px; height: 30px; }
-}
-@media (orientation: portrait) {
-  body.touch[data-screen="fight"]::after {
-    content: "GIRA EL MOVIL PARA VERLO EN GRANDE"; position: fixed; left: 0; right: 0; bottom: max(14px, env(safe-area-inset-bottom));
-    text-align: center; font-size: 8px; color: #6d7096;
-  }
 }
