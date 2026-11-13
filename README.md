@@ -5,7 +5,11 @@ Juego de lucha arcade 2D en el navegador (escritorio y móvil), ambientado en C�
 - **Luchadores:** Chapa (El Guerrero), Ares (El Viajero), Alba (El Marinero) y Martín (El Veterano).
 - **Escenarios:** el barrio de cada luchador (Candelaria, Santa María, La Caleta y Teatro Falla) y la Plaza de las Flores. En la selección: "BARRIO RIVAL" (se lucha en el barrio del rival, como en las recreativas) o "AL AZAR" (cualquiera, incluida la Plaza).
 
-## Créditos
+## Créditos y agradecimientos
+
+El botón de la estrella, junto al de pantalla completa, abre el rodillo de créditos al estilo de las recreativas: reparto, escenarios, voz, licencias y agradecimientos, con los luchadores desfilando abajo. También pasa solo unos segundos después de ganar el arcade. Enter, Esc o un toque lo cierran. El texto se edita en `src/ui/staffroll.ts`.
+
+## Créditos (monedas)
 
 Como en una recreativa: la tecla `5` (o el botón de moneda en móvil) añade un crédito, hasta 9. Empezar cuesta 1 crédito en 1P y 2 en 2 jugadores; ganar y pasar al siguiente rival es gratis; continuar tras perder cuesta 1. Sin créditos, la cuenta atrás de CONTINUE sigue corriendo y se puede echar uno antes de que llegue a 0. Al cargar la página hay 1 crédito de regalo; los créditos no se guardan al recargar.
 

@@ -20,6 +20,8 @@ body { display: flex; align-items: center; justify-content: center; height: 100d
 #btn-mute .ic-off, #btn-mute.off .ic-on { display: none; }
 #btn-mute.off .ic-off { display: block; }
 #sys #btn-mute.off { text-decoration: none; color: #ff5a3c; }
+#btn-credits svg { width: 19px; height: 19px; display: block; margin: auto; fill: currentColor; }
+body[data-screen="fight"] #btn-credits, body[data-screen="credits"] #btn-credits { display: none; }
 #btn-full svg { width: 18px; height: 18px; display: block; margin: auto; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: square; }
 #btn-full .ic-exit, #btn-full.on .ic-enter { display: none; }
 #btn-full.on .ic-exit { display: block; }

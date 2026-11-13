@@ -11,8 +11,9 @@ import { Renderer } from './render/renderer';
 import { CONTINUE_FROM, CONTINUE_SECOND, STAGE_CHOICES, Settings, VERSUS_FRAMES, continueButtons, drawContinue, drawDemoOverlay, drawPause, drawResult, drawSelect, drawTitle, drawVersus, freezeTitleIntro, skipTitleIntro, titleIntroPlaying, hitButton, pauseButtons, resultButtons, selectButtons } from './ui/screens';
 import { isTouchDevice, setupTouch } from './ui/touch';
 import { addCredit, getCredits, useCredits } from './ui/credits';
+import { STAFF_FRAMES, drawStaffRoll } from './ui/staffroll';
 
-type Screen = 'title' | 'select' | 'versus' | 'fight' | 'result' | 'continue';
+type Screen = 'credits' | 'title' | 'select' | 'versus' | 'fight' | 'result' | 'continue';
 
 async function boot() {
   const canvas = document.getElementById('game') as HTMLCanvasElement;
@@ -90,6 +91,17 @@ async function boot() {
     setScreen('fight');
   };
 
+  // Créditos: rodillo; al terminar (o al pulsar) vuelve a la pantalla de la que se vino.
+  let staffT = 0, staffBack: Screen = 'title';
+  /** Al ser campeón: unos segundos de celebración y después los créditos. */
+  let champT = 0;
+  const openStaff = () => {
+    if (screen === 'credits' || screen === 'fight') return;
+    if (demoMode) endDemo();
+    staffBack = screen === 'versus' ? 'select' : screen; staffT = 0;
+    setScreen('credits');
+  };
+  const closeStaff = () => { if (screen === 'credits') setScreen(staffBack); };
   const startDemo = () => {
     const ids = [...FIGHTER_IDS].sort(() => Math.random() - 0.5);
     match = new Match(FIGHTERS[ids[0]], FIGHTERS[ids[1]]);
@@ -147,6 +159,7 @@ async function boot() {
     const b = canvas.getBoundingClientRect();
     const x = ((e.clientX - b.left) / b.width) * VW, y = ((e.clientY - b.top) / b.height) * VH;
     titleIdle = 0;
+    if (screen === 'credits') { if (staffT > 30) closeStaff(); return; }
     if (demoMode) endDemo();
     else if (screen === 'title') { if (titleIntroPlaying()) skipTitleIntro(r); else act('title'); }
     else if (screen === 'select') act(hitButton(selectButtons(settings), x, y));
@@ -165,6 +178,7 @@ async function boot() {
     if (k === 'F2') { r.debug = !r.debug; e.preventDefault(); return; }
     titleIdle = 0;
     if (k === 'Digit5' || k === 'Numpad5') { act('coin'); return; }
+    if (screen === 'credits') { if (staffT > 30 && (k === 'Enter' || k === 'Space' || k === 'Escape')) closeStaff(); return; }
     if (demoMode) { endDemo(); return; }
     if (screen === 'title') { if (k === 'Enter' || k === 'Space') { if (titleIntroPlaying()) skipTitleIntro(r); else act('title'); } }
     else if (screen === 'select') {
@@ -197,6 +211,7 @@ async function boot() {
 
   document.getElementById('btn-pause')!.addEventListener('click', () => act('pause'));
   document.getElementById('btn-coin')!.addEventListener('click', () => { titleIdle = 0; act('coin'); });
+  document.getElementById('btn-credits')!.addEventListener('click', () => { audio.init(); titleIdle = 0; openStaff(); });
   const btnMute = document.getElementById('btn-mute')!;
   const syncMute = () => {
     btnMute.classList.toggle('off', audio.muted);
@@ -271,7 +286,7 @@ async function boot() {
       if (endT > 50) {
         // Si pierde un humano (contra la CPU, o cualquiera en 2 jugadores): ¿CONTINUE?
         if (settings.twoPlayers || m.matchWinner === 1) startContinue();
-        else { setScreen('result'); if (stage >= ladder.length - 1) audio.voice('champion'); }
+        else { setScreen('result'); if (stage >= ladder.length - 1) { audio.voice('champion'); champT = 1; } }
       }
       return;
     }
@@ -296,7 +311,8 @@ async function boot() {
   const titleHooks = { play: (s: Parameters<AudioManager['play']>[0]) => audio.play(s), voice: (id: string) => audio.voice(id), music: () => audio.setMusicHold(false) };
   const draw = () => {
     r.stage = screen === 'versus' || screen === 'fight' || screen === 'result' ? fightStage : 'plaza';
-    if (screen === 'title') drawTitle(r, touch, titleHooks);
+    if (screen === 'credits') drawStaffRoll(r, staffT, touch);
+    else if (screen === 'title') drawTitle(r, touch, titleHooks);
     else if (screen === 'select') drawSelect(r, settings, touch);
     else if (screen === 'fight' && match) {
       const you = demoMode ? 'CPU' : settings.twoPlayers ? 'J1' : 'TU', other = settings.twoPlayers && !demoMode ? 'J2' : 'CPU';
@@ -356,6 +372,8 @@ async function boot() {
     match = new Match(FIGHTERS[settings.char], FIGHTERS[ladder[stage]]);
     match.matchWinner = 0; match.f[0].wins = 2;
     setScreen('result');
+  } else if (params.get('screen') === 'credits') {
+    setScreen('title'); openStaff(); if (params.has('st')) staffT = Number(params.get('st'));
   } else if (params.get('screen') === 'demo') {
     startDemo();
   } else if (params.has('screen')) { if (params.has('2p')) settings.twoPlayers = true; setScreen(params.get('screen') as Screen); }
@@ -374,6 +392,9 @@ async function boot() {
       if (screen === 'fight' && !paused) { stepFight(); if (demoMode && match && match.frame > DEMO_MAX) endDemo(); }
       else if (screen === 'title' && !titleIntroPlaying() && ++titleIdle > DEMO_AFTER) startDemo();
       else if (screen === 'continue') stepContinue();
+      else if (screen === 'credits' && ++staffT >= STAFF_FRAMES) closeStaff();
+      if (champT > 0 && screen === 'result' && ++champT > 60 * 5) { champT = 0; openStaff(); }
+      else if (champT > 0 && screen !== 'result') champT = 0;
       else if (screen === 'versus' && !vsFrozen && ++vsT >= VERSUS_FRAMES) startFight();
     }
     draw();
