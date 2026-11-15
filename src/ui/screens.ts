@@ -1,5 +1,5 @@
 // Pantallas de menú dibujadas en el canvas: título, selección y resultado.
-import { DIFFICULTY_NAMES, Difficulty, FIGHTERS, FIGHTER_IDS, FighterId, HOME_STAGE, STAGES, StageId, VH, VW } from '../game/data';
+import { DIFFICULTY_NAMES, Difficulty, FIGHTERS, FIGHTER_IDS, FighterId, HOME_STAGE, SECRET, STAGES, StageId, VH, VW } from '../game/data';
 import { Renderer } from '../render/renderer';
 
 export interface Settings {
@@ -192,7 +192,15 @@ export const HOMES: Record<FighterId, { x: number; y: number; place: string }> =
   canijo: { x: 128, y: 150, place: 'EN ALTA MAR' },
   // fuera de Cádiz: en el mar de abajo a la derecha, pasado el faro de Santa María
   bizcocho: { x: 1450, y: 930, place: 'EN ALTA MAR' },
+  // secreto: en un punto de Cádiz al azar en cada partida (se elige al cargar)
+  // (puntos en calles del casco antiguo, lejos de los rótulos y de los barrios de los demás)
+  heredero: { ...[
+    { x: 800, y: 400 }, { x: 1000, y: 470 }, { x: 1130, y: 560 }, { x: 760, y: 250 }, { x: 1080, y: 330 }, { x: 880, y: 520 },
+  ][Math.floor(Math.random() * 6)], place: '???' },
 };
+/** Nombre y apodo como se muestran antes del combate (los secretos, ocultos). */
+export const shownName = (id: FighterId) => (SECRET.has(id) ? '???' : FIGHTERS[id].name);
+const shownTitle = (id: FighterId) => (SECRET.has(id) ? 'LUCHADOR MISTERIOSO' : FIGHTERS[id].title);
 /**
  * Caras en dos filas en el mar bajo la isla, entre La Caleta y el rótulo de Santa María (x 176-370). Al añadir
  * luchadores las filas ganan columnas (3 con 6, 4 con 7-8...) y las caras se encogen para caber.
@@ -239,8 +247,14 @@ function drawButton(r: Renderer, b: Button, size = 8) {
 }
 
 function drawStats(r: Renderer, id: FighterId, sx: number, y0: number, head: string, headColor: string) {
-  const c = r.ctx, d = FIGHTERS[id];
-  r.text(head, sx, y0, 7, headColor, 'left');
+  const c = r.ctx, d = FIGHTERS[id], secret = SECRET.has(id);
+  r.text(secret ? '???' : head, sx, y0, 7, headColor, 'left');
+  if (secret) {
+    ['FUERZA', 'VELOC.', 'TECNICA', 'AGUANTE'].forEach((n, k) => { r.text(n, sx, y0 + 16 + k * 19, 6, '#fff', 'left'); r.text('? ? ? ? ?', sx, y0 + 26 + k * 19, 6, '#b040ff', 'left'); });
+    r.text('ESPECIAL', sx, y0 + 96, 6, '#fff', 'left');
+    r.text('???', sx, y0 + 108, 7, '#ff7a50', 'left');
+    return;
+  }
   const rows: [string, number][] = [['FUERZA', d.stats.fuerza], ['VELOC.', d.stats.velocidad], ['TECNICA', d.stats.tecnica], ['AGUANTE', d.stats.aguante]];
   rows.forEach(([n, v], k) => {
     const yy = y0 + 16 + k * 19;
@@ -255,13 +269,16 @@ function drawStats(r: Renderer, id: FighterId, sx: number, y0: number, head: str
 function drawBigPortrait(r: Renderer, id: FighterId, side: 0 | 1, label: string, col: string) {
   const c = r.ctx, img = r.assets.portrait[id];
   const h = 132, w = (img.width * h) / img.height;
-  c.save(); c.imageSmoothingEnabled = true;
-  if (side === 0) c.drawImage(img, -4, VH - h, w, h);
-  else { c.translate(VW + 4, VH - h); c.scale(-1, 1); c.drawImage(img, 0, 0, w, h); }
-  c.restore();
+  if (SECRET.has(id)) r.drawSilhouette(id, side === 0 ? -4 : VW + 4 - w, VH - h, w, h, side === 1);
+  else {
+    c.save(); c.imageSmoothingEnabled = true;
+    if (side === 0) c.drawImage(img, -4, VH - h, w, h);
+    else { c.translate(VW + 4, VH - h); c.scale(-1, 1); c.drawImage(img, 0, 0, w, h); }
+    c.restore();
+  }
   const tx = side === 0 ? 8 : VW - 8, al = side === 0 ? 'left' : 'right';
   r.text(label, tx, VH - h - 34, 9, col, al);
-  gradText(r, FIGHTERS[id].name, tx, VH - h - 18, 15, '#ffd060', '#ff5a00', al);
+  gradText(r, shownName(id), tx, VH - h - 18, 15, '#ffd060', '#ff5a00', al);
   r.text(HOMES[id].place, tx, VH - h - 4, 6, '#fff', al);
 }
 
@@ -293,6 +310,7 @@ export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
   // barrios: punto en cada uno y cursores deslizándose por el mapa
   for (const id of FIGHTER_IDS) {
     const [hx, hy] = mapPt(HOMES[id].x, HOMES[id].y);
+    if (SECRET.has(id)) { r.text('?', hx + 0.5, hy + 0.5, 9, Math.floor(t / 20) % 2 ? '#ffd800' : '#ff7aff', 'center', '#000'); continue; }
     c.fillStyle = '#000'; c.beginPath(); c.arc(hx, hy, 3.5, 0, Math.PI * 2); c.fill();
     c.fillStyle = Math.floor(t / 20) % 2 ? '#fff' : '#ffe27a'; c.beginPath(); c.arc(hx, hy, 2.2, 0, Math.PI * 2); c.fill();
   }
@@ -315,7 +333,8 @@ export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
   // escenario del próximo combate cuando es el barrio del rival
   if (s.stage === 'home') {
     const rival = s.twoPlayers ? s.char2 : null;
-    r.text(rival ? STAGES[HOME_STAGE[rival]].name : 'EL DE CADA RIVAL', OPT_X, OPT_Y + 158, 5, '#ffd800', 'left');
+    const st = rival ? (SECRET.has(rival) ? '???' : STAGES[HOME_STAGE[rival]].name) : 'EL DE CADA RIVAL';
+    r.text(st, OPT_X, OPT_Y + 158, st.length > 21 ? 4 : 5, '#ffd800', 'left');
   }
   // (en 2 jugadores ahí va el nombre del 2P)
   if (!touch && !s.twoPlayers) {
@@ -338,7 +357,7 @@ export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
     const id = b.action.slice(5) as FighterId;
     const p1 = s.char === id, p2 = s.twoPlayers && s.char2 === id;
     c.fillStyle = '#000'; c.fillRect(b.x - 2, b.y - 2, b.w + 4, b.h + 4);
-    r.drawPortrait(id, b.x, b.y, b.w);
+    if (SECRET.has(id)) r.drawSecret(b.x, b.y, b.w); else r.drawPortrait(id, b.x, b.y, b.w);
     if (!p1 && !p2) { c.fillStyle = 'rgba(0,0,30,0.45)'; c.fillRect(b.x, b.y, b.w, b.h); }
     if (p1) { drawCorners(r, b.x - 3, b.y - 3, b.w + 6, b.h + 6, blink ? '#fff' : COL_J1, 9); r.text(s.twoPlayers ? '1P' : 'TU', b.x + 9, b.y + 7, 6, COL_J1); }
     if (p2) { drawCorners(r, b.x - 1, b.y - 1, b.w + 2, b.h + 2, blink ? '#fff' : COL_J2, 7); r.text('2P', b.x + b.w - 9, b.y + 7, 6, COL_J2); }
@@ -366,13 +385,13 @@ export function drawVersus(r: Renderer, left: FighterId, right: FighterId, t: nu
   for (const [id, x, flip, col] of [[left, lx, false, COL_J1], [right, rxp, true, COL_J2]] as const) {
     c.fillStyle = '#000'; c.fillRect(x - 4, y - 4, size + 8, size + 8);
     c.fillStyle = col; c.fillRect(x - 2, y - 2, size + 4, size + 4);
-    r.drawPortrait(id, x, y, size, flip);
+    if (SECRET.has(id)) r.drawSecret(x, y, size); else r.drawPortrait(id, x, y, size, flip);
   }
   if (t > 12) {
-    r.text(FIGHTERS[left].name, 60 + size / 2, y + size + 22, 14, COL_J1);
-    r.text(FIGHTERS[left].title, 60 + size / 2, y + size + 40, 6, '#fff');
-    r.text(FIGHTERS[right].name, VW - 60 - size / 2, y + size + 22, 14, COL_J2);
-    r.text(FIGHTERS[right].title, VW - 60 - size / 2, y + size + 40, 6, '#fff');
+    r.text(shownName(left), 60 + size / 2, y + size + 22, 14, COL_J1);
+    r.text(shownTitle(left), 60 + size / 2, y + size + 40, 6, '#fff');
+    r.text(shownName(right), VW - 60 - size / 2, y + size + 22, 14, COL_J2);
+    r.text(shownTitle(right), VW - 60 - size / 2, y + size + 40, 6, '#fff');
   }
   if (t > 16) {
     const pop = Math.min(1, (t - 16) / 8);
@@ -383,7 +402,8 @@ export function drawVersus(r: Renderer, left: FighterId, right: FighterId, t: nu
   r.bigText('STREET CAI', VW / 2, 28, 18);
   if (t > 12 && help.length) help.forEach((h, i) => r.text(h, VW / 2, 296 + i * 11, 5, i ? '#fff' : '#ffd800'));
   if (sub) r.text(sub, VW / 2, 322, 9, '#ffd800');
-  r.text(STAGES[stage].name + ' · CADIZ', VW / 2, 342, 7, '#fff');
+  const city = STAGES[stage].city ?? 'CADIZ';
+  r.text(STAGES[stage].name + (city ? ' · ' + city : ''), VW / 2, 342, 7, '#fff');
 }
 
 export function resultButtons(): Button[] {
@@ -612,6 +632,11 @@ export const WIN_QUOTES: Record<FighterId, string[]> = {
     'TENGO MAS AÑOS EN EL FALLA QUE TU EN EL MUNDO, CHIQUILLO.',
     'QUITATE EL SOMBRERO ANTE LA EXPERIENCIA.',
     'EL CONCURSO SE GANA CON TABLAS, NO CON PRISAS.',
+  ],
+  heredero: [
+    'EL LEVANTE SE HEREDA, QUILLO. Y TU NI LO HUELES.',
+    'TE HE CANTADO LAS CUARENTA CON COPLA AFILA.',
+    'NO SABIAS QUIEN ERA, ¿VERDAD? AHORA YA NO SE TE OLVIDA.',
   ],
   bizcocho: [
     'EN MI BARCO SE PELEA A COMPAS. TU HAS IDO A CONTRATIEMPO.',

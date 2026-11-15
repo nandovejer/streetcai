@@ -1,6 +1,6 @@
 // Créditos y agradecimientos al estilo de las recreativas: rodillo de texto sobre negro y desfile de
 // luchadores abajo. Se abren con el botón junto a pantalla completa y pasan solos al ganar el arcade.
-import { FIGHTERS, FIGHTER_IDS, GROUND_Y, STAGES, STAGE_IDS, VH, VW } from '../game/data';
+import { FIGHTERS, FIGHTER_IDS, FighterId, GROUND_Y, SECRET, STAGES, STAGE_IDS, VH, VW } from '../game/data';
 import { Renderer } from '../render/renderer';
 
 type Line = { kind: 'logo' | 'head' | 'name' | 'small' | 'gap' | 'cast'; text?: string; sub?: string; id?: string };
@@ -17,7 +17,8 @@ const LINES: Line[] = [
   { kind: 'small', text: 'CON LA DIRECCION DE NANDO MUÑOZ' },
   { kind: 'gap' },
   { kind: 'head', text: 'REPARTO' },
-  ...FIGHTER_IDS.map((id): Line => ({ kind: 'cast', id, text: FIGHTERS[id].name, sub: FIGHTERS[id].title })),
+  // los secretos salen ocultos: los créditos se pueden ver desde la portada
+  ...FIGHTER_IDS.map((id): Line => (SECRET.has(id) ? { kind: 'cast', id, text: '???', sub: 'LUCHADOR SECRETO' } : { kind: 'cast', id, text: FIGHTERS[id].name, sub: FIGHTERS[id].title })),
   { kind: 'gap' },
   { kind: 'head', text: 'ESCENARIOS' },
   ...STAGE_IDS.map((id): Line => ({ kind: 'name', text: STAGES[id].name })),
@@ -44,7 +45,7 @@ const LINES: Line[] = [
   { kind: 'head', text: 'AGRADECIMIENTOS' },
   { kind: 'name', text: 'A LA GENTE DE CADIZ' },
   { kind: 'name', text: 'A LOS BARES CON MAQUINITAS' },
-  { kind: 'name', text: 'A ' + FIGHTER_IDS.map((id) => FIGHTERS[id].name).join(', ').replace(/, ([^,]*)$/, ' Y $1') },
+  { kind: 'name', text: 'A ' + FIGHTER_IDS.filter((id) => !SECRET.has(id)).map((id) => FIGHTERS[id].name).join(', ').replace(/, ([^,]*)$/, ' Y $1') },
   { kind: 'small', text: 'POR PRESTAR SU CARA' },
   { kind: 'name', text: 'A LOS CLASICOS DE LOS 90' },
   { kind: 'small', text: 'QUE NOS QUITARON LAS MONEDAS' },
@@ -93,7 +94,7 @@ export function drawStaffRoll(r: Renderer, t: number, touch: boolean) {
       else if (l.kind === 'small') r.text(l.text!, VW / 2, cy, 6, '#9ab0ff');
       else if (l.kind === 'cast') {
         c.fillStyle = '#ffd800'; c.fillRect(VW / 2 - 92, cy - 13, 26, 26);
-        r.drawPortrait(l.id!, VW / 2 - 91, cy - 12, 24);
+        if (SECRET.has(l.id as FighterId)) r.drawSecret(VW / 2 - 91, cy - 12, 24); else r.drawPortrait(l.id!, VW / 2 - 91, cy - 12, 24);
         r.text(l.text!, VW / 2 - 56, cy - 5, 9, '#fff', 'left');
         r.text(l.sub!, VW / 2 - 56, cy + 8, 6, '#9ab0ff', 'left');
       }
@@ -113,7 +114,9 @@ export function drawStaffRoll(r: Renderer, t: number, touch: boolean) {
   FIGHTER_IDS.forEach((id, i) => {
     const x = ((t * 0.7 + i * gap) % (VW + 160)) - 80;
     c.fillStyle = 'rgba(0,0,0,0.6)'; c.beginPath(); c.ellipse(x, GROUND_Y + 23, 14, 2.5, 0, 0, Math.PI * 2); c.fill();
+    if (SECRET.has(id)) { c.save(); c.filter = 'brightness(0)'; }
     r.drawSprite(id, `walk_${Math.floor(t / 6 + i) % 8}`, x, GROUND_Y + 24, 1, 0.42);
+    if (SECRET.has(id)) c.restore();
   });
   if (Math.floor(t / 40) % 2 === 0) r.text(touch ? 'TOCA PARA SALIR' : 'ENTER O ESC PARA SALIR', 8, 10, 5, '#5a5a8a', 'left');
 }

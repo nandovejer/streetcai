@@ -5,11 +5,11 @@ import { loadAssets } from './engine/assets';
 import { AudioManager } from './engine/audio';
 import { InputManager } from './engine/input';
 import { AI } from './game/ai';
-import { DIFFICULTY_NAMES, Difficulty, FIGHTERS, FIGHTER_IDS, FighterId, HOME_STAGE, STAGE_IDS, StageId, VH, VW } from './game/data';
+import { DIFFICULTY_NAMES, Difficulty, FIGHTERS, SECRET, FIGHTER_IDS, FighterId, HOME_STAGE, STAGE_IDS, StageId, VH, VW } from './game/data';
 import { Match } from './game/match';
 import { Input } from './game/fighter';
 import { Renderer } from './render/renderer';
-import { CHAMPION_FRAMES, CONTINUE_FROM, CONTINUE_SECOND, drawChampion, STAGE_CHOICES, Settings, VERSUS_FRAMES, continueButtons, drawContinue, randomQuote, drawDemoOverlay, drawPause, drawResult, drawSelect, drawTitle, drawVersus, freezeTitleIntro, skipTitleIntro, titleIntroPlaying, hitButton, pauseButtons, resultButtons, selectButtons } from './ui/screens';
+import { CHAMPION_FRAMES, CONTINUE_FROM, CONTINUE_SECOND, drawChampion, STAGE_CHOICES, Settings, VERSUS_FRAMES, continueButtons, drawContinue, randomQuote, drawDemoOverlay, drawPause, drawResult, drawSelect, drawTitle, drawVersus, freezeTitleIntro, skipTitleIntro, titleIntroPlaying, hitButton, pauseButtons, resultButtons, selectButtons, shownName } from './ui/screens';
 import { isTouchDevice, setupTouch } from './ui/touch';
 import { STAFF_FRAMES, drawStaffRoll } from './ui/staffroll';
 
@@ -30,7 +30,7 @@ async function boot() {
 
   const r = new Renderer(canvas, assets);
   // frases del locutor (MP3 generados con Piper TTS)
-  const voiceIds = ['round1', 'round2', 'round3', 'round4', 'round5', 'fight', 'ko', 'time', 'perfect', 'draw', 'title', 'gameover', 'select', 'continue', 'champion'];
+  const voiceIds = ['round1', 'round2', 'round3', 'round4', 'round5', 'fight', 'ko', 'time', 'perfect', 'draw', 'title', 'gameover', 'select', 'continue', 'champion', 'mystery'];
   for (const a of FIGHTER_IDS) { voiceIds.push(`win_${a}`, `super_${a}`); for (const b of FIGHTER_IDS) if (a !== b) voiceIds.push(`vs_${a}_${b}`); }
   const input = new InputManager();
   const audio = new AudioManager();
@@ -80,7 +80,8 @@ async function boot() {
     vsT = 0;
     setScreen('versus');
     audio.play('start');
-    audio.voice(`vs_${settings.char}_${rivalId()}`);
+    // con un luchador secreto el locutor no dice su nombre
+    audio.voice(SECRET.has(settings.char) || SECRET.has(rivalId()) ? 'mystery' : `vs_${settings.char}_${rivalId()}`);
   };
   const startFight = () => {
     match = new Match(FIGHTERS[settings.char], FIGHTERS[rivalId()]);
@@ -255,8 +256,8 @@ async function boot() {
   const PANEL_HINT: Record<string, () => string> = {
     title: () => 'OK: EMPEZAR',
     select: () => (settings.twoPlayers
-      ? `JOYSTICK: ELIGE J${settings.pickTurn + 1} · OK: ${settings.pickTurn ? 'A LUCHAR' : 'CONFIRMAR'}\nJ1 ${FIGHTERS[settings.char].name}  VS  J2 ${FIGHTERS[settings.char2].name}`
-      : `JOYSTICK: ELEGIR · OK: A LUCHAR\n${FIGHTERS[settings.char].name} · ${DIFFICULTY_NAMES[settings.difficulty]} · ${settings.stage === 'random' ? 'AL AZAR' : 'BARRIO RIVAL'}`),
+      ? `JOYSTICK: ELIGE J${settings.pickTurn + 1} · OK: ${settings.pickTurn ? 'A LUCHAR' : 'CONFIRMAR'}\nJ1 ${shownName(settings.char)}  VS  J2 ${shownName(settings.char2)}`
+      : `JOYSTICK: ELEGIR · OK: A LUCHAR\n${shownName(settings.char)} · ${DIFFICULTY_NAMES[settings.difficulty]} · ${settings.stage === 'random' ? 'AL AZAR' : 'BARRIO RIVAL'}`),
     versus: () => 'OK: SALTAR',
     continue: () => 'OK: SEGUIR · ATRAS: ABANDONAR',
     result: () => 'OK: SEGUIR · ATRAS: MENU',

@@ -20,6 +20,7 @@ FIGHTERS = {  # id: (nombre hablado, especial hablado)
     'selu': ('Selu', 'Chirigota'),
     'canijo': ('Canijo', 'Eruto'),
     'bizcocho': ('Biscocho', 'Quejío'),
+    'heredero': ('Heredero', 'Copla afilá'),
 }
 
 def phrases():
@@ -29,6 +30,7 @@ def phrases():
         'fight': '¡A peleá, picha!', 'ko': '¡Kei ou!', 'time': '¡Tiempo!', 'perfect': '¡Perfecto!', 'draw': '¡Empate, quillo!',
         'title': '¡Strit Cai!', 'gameover': '¡Se acabó lo que se daba!', 'select': '¡Elige tu luchadó!',
         'continue': '¿Sigue, quillo?', 'champion': '¡Campeón de Cai!',
+        'mystery': '¡Un luchadó misterioso!',
     }
     for fid, (name, special) in FIGHTERS.items():
         p[f'win_{fid}'] = f'¡{name} gana!'

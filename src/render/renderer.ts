@@ -260,6 +260,26 @@ export class Renderer {
     }
   }
 
+  /** Recuadro de luchador secreto: fondo oscuro y una interrogación que late. */
+  drawSecret(x: number, y: number, size: number) {
+    const c = this.ctx, pulse = 0.85 + Math.sin(this.time * 0.12) * 0.15;
+    const g = c.createRadialGradient(x + size / 2, y + size / 2, 0, x + size / 2, y + size / 2, size * 0.7);
+    g.addColorStop(0, '#3a1460'); g.addColorStop(1, '#0a0618');
+    c.fillStyle = g; c.fillRect(x, y, size, size);
+    c.save(); c.globalAlpha = pulse;
+    this.text('?', x + size / 2 + size * 0.03, y + size / 2 + size * 0.04, Math.round(size * 0.62), '#ffd800', 'center', '#000');
+    c.restore();
+  }
+
+  /** Silueta negra de un retrato (luchador secreto), con un "?" encima. */
+  drawSilhouette(id: string, x: number, y: number, w: number, h: number, flip = false) {
+    const c = this.ctx, img = this.assets.portrait[id];
+    c.save(); c.imageSmoothingEnabled = true; c.filter = 'brightness(0) drop-shadow(0 0 4px #b040ff)';
+    if (flip) { c.translate(x + w, y); c.scale(-1, 1); c.drawImage(img, 0, 0, w, h); } else c.drawImage(img, x, y, w, h);
+    c.restore();
+    this.text('?', x + w / 2, y + h * 0.42, Math.round(h * 0.4), '#ffd800', 'center', '#000');
+  }
+
   drawPortrait(id: string, x: number, y: number, size: number, flip = false) {
     const c = this.ctx, img = this.assets.portrait[id];
     const s = Math.min(img.width, img.height), ox = (img.width - s) / 2;

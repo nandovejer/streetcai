@@ -64,12 +64,32 @@ const BASE_MOVES: Record<MoveId, MoveData> = {
   },
 };
 
+/** Escenarios: imagen en public/assets/stages/<id>/bg.webp. */
+export const STAGE_IDS = ['plaza', 'caleta', 'candelaria', 'falla', 'santamaria', 'rinconada', 'zonafranca'] as const;
+export type StageId = (typeof STAGE_IDS)[number];
+/** city: lo que sale tras el nombre en el VS ('' si no está en Cádiz). */
+export const STAGES: Record<StageId, { name: string; ambient: 'petals' | 'gulls'; city?: string }> = {
+  plaza: { name: 'PLAZA DE LAS FLORES', ambient: 'petals' },
+  caleta: { name: 'LA CALETA', ambient: 'gulls' },
+  candelaria: { name: 'PLAZA DE LA CANDELARIA', ambient: 'petals' },
+  falla: { name: 'TEATRO FALLA', ambient: 'petals' },
+  santamaria: { name: 'BARRIO DE SANTA MARIA', ambient: 'petals' },
+  rinconada: { name: 'SAN JOSE DE LA RINCONADA', ambient: 'petals', city: '' },
+  zonafranca: { name: 'ZONA FRANCA', ambient: 'gulls' },
+};
+
 /** Luchadores disponibles, en el orden en que aparecen en la selección. */
-export const FIGHTER_IDS = ['chapa', 'ares', 'alba', 'martin', 'selu', 'canijo', 'bizcocho'] as const;
+export const FIGHTER_IDS = ['chapa', 'ares', 'alba', 'martin', 'selu', 'canijo', 'bizcocho', 'heredero'] as const;
 export type FighterId = (typeof FIGHTER_IDS)[number];
 
 /** Escenario del barrio de cada luchador (el suyo en el mapa de la selección). */
-export const HOME_STAGE: Record<FighterId, StageId> = { chapa: 'candelaria', ares: 'santamaria', alba: 'caleta', martin: 'falla', selu: 'plaza', canijo: 'caleta', bizcocho: 'santamaria' };
+export const HOME_STAGE: Record<FighterId, StageId> = {
+  chapa: 'candelaria', ares: 'santamaria', alba: 'caleta', martin: 'falla', selu: 'plaza', canijo: 'caleta', bizcocho: 'rinconada',
+  // el secreto sale en un punto al azar del mapa, pero pelea siempre en la Zona Franca
+  heredero: 'zonafranca',
+};
+/** Luchadores secretos: en la selección y el VS salen como "?" y no se sabe quién es hasta el combate. */
+export const SECRET: ReadonlySet<FighterId> = new Set<FighterId>(['heredero']);
 
 export interface FighterDef {
   id: FighterId;
@@ -141,17 +161,12 @@ export const FIGHTERS: Record<FighterId, FighterDef> = {
     specialName: 'QUEJIO', proj: { speed: 5.2, damage: 11, core: '#ffe6ef', glow: '#ff3b6b', size: 15 },
     stats: { fuerza: 4, velocidad: 4, tecnica: 4, aguante: 4 }, moves: scaleMoves(0.95, 1.0),
   },
-};
-
-/** Escenarios: imagen en public/assets/stages/<id>/bg.webp. */
-export const STAGE_IDS = ['plaza', 'caleta', 'candelaria', 'falla', 'santamaria'] as const;
-export type StageId = (typeof STAGE_IDS)[number];
-export const STAGES: Record<StageId, { name: string; ambient: 'petals' | 'gulls' }> = {
-  plaza: { name: 'PLAZA DE LAS FLORES', ambient: 'petals' },
-  caleta: { name: 'LA CALETA', ambient: 'gulls' },
-  candelaria: { name: 'PLAZA DE LA CANDELARIA', ambient: 'petals' },
-  falla: { name: 'TEATRO FALLA', ambient: 'petals' },
-  santamaria: { name: 'BARRIO DE SANTA MARIA', ambient: 'petals' },
+  // Luchador secreto: copla afilá, ingenio y salero. Rápido y técnico, algo frágil.
+  heredero: {
+    id: 'heredero', name: 'HEREDERO', title: 'DEL LEVANTE', maxHp: 138, walk: 2.6, jumpV: 11.0, jumpVx: 3.0, power: 1.0,
+    specialName: 'COPLA AFILA', proj: { speed: 5.8, damage: 10, core: '#e8fff4', glow: '#2fd08a', size: 14 },
+    stats: { fuerza: 3, velocidad: 4, tecnica: 4, aguante: 3 }, moves: scaleMoves(0.92, 1.0),
+  },
 };
 
 export type Difficulty = 0 | 1 | 2;
