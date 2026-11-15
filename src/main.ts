@@ -22,19 +22,35 @@ async function boot() {
   const params = new URLSearchParams(location.search);
   const touch = isTouchDevice() || params.has('touch');
 
+  // Al arrancar solo hace falta la portada; lo demás se descarga en segundo plano (ver Assets.warm)
   const [assets] = await Promise.all([
-    loadAssets([...FIGHTER_IDS]),
+    loadAssets(),
     document.fonts.load('10px "Press Start 2P"').catch(() => undefined),
   ]);
+  // con parámetros de prueba (?screen=, ?demo=...) se espera a tenerlo todo para que las capturas salgan completas
+  if ([...params.keys()].some((k) => k !== 'touch' && k !== 'debug')) await assets.all();
   loading.remove();
 
   const r = new Renderer(canvas, assets);
+  // Resolución interna: 640x360 (escala 1) si el lienzo ocupa pocos píxeles reales o el móvil va justo; 1280x720 si no.
+  let lowQuality = false;
+  try { lowQuality = localStorage.getItem('sc-low') === '1'; } catch { /* sin almacenamiento */ }
+  if (params.has('lowq')) lowQuality = true; // ?lowq=1 fuerza la resolución pequeña (pruebas); ?hq=1 desactiva el cambio automático
+  const applyScale = () => {
+    const realPx = Math.min(innerWidth, (innerHeight * 16) / 9) * (devicePixelRatio || 1);
+    r.setScale(lowQuality || realPx < 700 ? 1 : 2);
+  };
+  applyScale();
+  addEventListener('resize', applyScale);
+  let slowEma = 16.7, slowFrames = 0;
   // frases del locutor (MP3 generados con Piper TTS)
+  // Solo las frases comunes se piden al arrancar; las de cada luchador (win_, super_) y los "X contra Y" (vs_)
+  // se piden cuando se va a pelear, que son muchos archivos pequeños que casi nunca se usan todos.
   const voiceIds = ['round1', 'round2', 'round3', 'round4', 'round5', 'fight', 'ko', 'time', 'perfect', 'draw', 'title', 'gameover', 'select', 'continue', 'champion', 'mystery'];
-  for (const a of FIGHTER_IDS) { voiceIds.push(`win_${a}`, `super_${a}`); for (const b of FIGHTER_IDS) if (a !== b) voiceIds.push(`vs_${a}_${b}`); }
   const input = new InputManager();
   const audio = new AudioManager();
   audio.loadVoices(voiceIds);
+  const fighterVoices = (...ids: FighterId[]) => audio.loadVoices(ids.flatMap((a) => [`win_${a}`, `super_${a}`]));
   const settings: Settings = { char: 'chapa', char2: 'ares', difficulty: 1, twoPlayers: false, pickTurn: 0, stage: 'home' };
   let fightStage: StageId = 'plaza';
   const pickStage = () => {
@@ -80,9 +96,16 @@ async function boot() {
     vsT = 0;
     setScreen('versus');
     audio.play('start');
+    // pide ya lo que falte (luchadores, escenario, caras de derrota y voces); el combate espera si no ha llegado
+    void assets.needFight([settings.char, rivalId()], fightStage);
+    fighterVoices(settings.char, rivalId());
     // con un luchador secreto el locutor no dice su nombre
-    audio.voice(SECRET.has(settings.char) || SECRET.has(rivalId()) ? 'mystery' : `vs_${settings.char}_${rivalId()}`);
+    const vsId = SECRET.has(settings.char) || SECRET.has(rivalId()) ? 'mystery' : `vs_${settings.char}_${rivalId()}`;
+    audio.loadVoices([vsId]);
+    audio.prime([vsId, 'round1', 'fight', 'ko', 'perfect', `win_${settings.char}`, `win_${rivalId()}`, `super_${settings.char}`, `super_${rivalId()}`]);
+    audio.voice(vsId);
   };
+  const fightReady = () => assets.fightReady([settings.char, rivalId()], fightStage);
   const startFight = () => {
     match = new Match(FIGHTERS[settings.char], FIGHTERS[rivalId()]);
     ai = settings.twoPlayers ? null : new AI(settings.difficulty);
@@ -90,6 +113,9 @@ async function boot() {
     r.resetFight();
     audio.play('start');
     setScreen('fight');
+    // en el arcade, adelanta el siguiente rival mientras se pelea
+    const next = !settings.twoPlayers ? ladder[stage + 1] : undefined;
+    if (next) { void assets.needFight([next], HOME_STAGE[next]); fighterVoices(next); audio.loadVoices([`vs_${settings.char}_${next}`]); }
   };
 
   // Créditos: rodillo; al terminar (o al pulsar) vuelve a la pantalla de la que se vino.
@@ -106,9 +132,12 @@ async function boot() {
   };
   const closeStaff = () => { if (screen === 'credits') setScreen(staffBack); };
   const startDemo = () => {
-    const ids = [...FIGHTER_IDS].sort(() => Math.random() - 0.5);
+    // la exhibición solo usa lo que ya se ha descargado: si aún no hay dos luchadores y un escenario, espera
+    const ids = FIGHTER_IDS.filter((id) => assets.hasFighter(id)).sort(() => Math.random() - 0.5);
+    const stages = STAGE_IDS.filter((s) => assets.stages[s]);
+    if (ids.length < 2 || !stages.length) { titleIdle = 0; return; }
     match = new Match(FIGHTERS[ids[0]], FIGHTERS[ids[1]]);
-    fightStage = STAGE_IDS[Math.floor(Math.random() * STAGE_IDS.length)];
+    fightStage = stages[Math.floor(Math.random() * stages.length)];
     demoAi = new AI(2); ai = new AI(2);
     demoMode = true; paused = false; endT = 0;
     r.resetFight();
@@ -150,7 +179,7 @@ async function boot() {
     }
     else if (a === 'fight') { ladder = []; goVersus(); }
     else if (a === 'arcade:next') { if (stage < ladder.length - 1) { stage++; goVersus(); } }
-    else if (a === 'skip') { if (screen === 'versus' && vsT > 20) startFight(); }
+    else if (a === 'skip') { if (screen === 'versus' && vsT > 20 && fightReady()) startFight(); }
     else if (a === 'menu') { paused = false; audio.play('select'); setScreen('select'); }
     else if (a === 'resume') paused = false;
     else if (a === 'pause') { if (screen === 'fight' && match && match.phase !== 'matchEnd') paused = !paused; }
@@ -391,7 +420,10 @@ async function boot() {
       const help = touch ? ['JOYSTICK MOVER - P/K FLOJOS - PF/KF FUERTES - SP ESPECIAL', 'ATRAS = BLOQUEAR - DOBLE TOQUE = DASH - BARRA LLENA + SP = SUPER']
         : settings.twoPlayers ? ['1P: WASD + F/G FLOJOS - T/Y FUERTES - R BLOQUEO - H ESPECIAL', '2P: FLECHAS + J/K FLOJOS - U/I FUERTES - O BLOQUEO - L ESPECIAL']
         : ['WASD/FLECHAS MOVER - F/G FLOJOS - T/Y FUERTES - R BLOQUEO - H ESPECIAL', 'ATRAS = BLOQUEAR - DOBLE TOQUE = DASH - BARRA LLENA + ESPECIAL = SUPER - ESC PAUSA'];
-      drawVersus(r, settings.char, rivalId(), vsT, sub, fightStage, help);
+      // si aún falta algo por descargar, en lugar de la ayuda sale CARGANDO...
+      const waiting = vsT >= VERSUS_FRAMES && !fightReady();
+      drawVersus(r, settings.char, rivalId(), vsT, sub, fightStage, waiting ? [] : help);
+      if (waiting) r.text('CARGANDO...', VW / 2, 300, 8, Math.floor(r.time / 20) % 2 ? '#fff' : '#ffd800');
     } else if (screen === 'result' && match) {
       const w = match.matchWinner, win = match.f[w].def.id, lose = match.f[1 - w].def.id;
       if (champT > 0) { if (drawChampion(r, win, lose, ladder.length, champT) > 0) audio.play('land'); }
@@ -460,7 +492,13 @@ async function boot() {
   let last = performance.now(), acc = 0;
   const STEP = 1000 / 60;
   const loop = (now: number) => {
-    acc += Math.min(100, now - last); last = now;
+    const dt = now - last;
+    acc += Math.min(100, dt); last = now;
+    // si en pleno combate el dispositivo no llega a ~48 fps sostenidos, baja a la resolución pequeña para siempre
+    if (screen === 'fight' && !paused && dt < 100 && r.scale > 1) {
+      slowEma = slowEma * 0.97 + dt * 0.03;
+      if (++slowFrames > 240 && slowEma > 21 && !params.has("hq")) { lowQuality = true; applyScale(); try { localStorage.setItem('sc-low', '1'); } catch { /* ok */ } }
+    }
     let n = 0;
     while (acc >= STEP && n++ < 5) {
       acc -= STEP;
@@ -471,13 +509,34 @@ async function boot() {
       else if (screen === 'credits' && ++staffT >= STAFF_FRAMES) closeStaff();
       if (champT > 0 && screen === 'result' && !champFrozen && ++champT > CHAMPION_FRAMES) skipChampion();
       else if (champT > 0 && screen !== 'result') champT = 0;
-      else if (screen === 'versus' && !vsFrozen && ++vsT >= VERSUS_FRAMES) startFight();
+      else if (screen === 'versus' && !vsFrozen) {
+        if (vsT < VERSUS_FRAMES) vsT++;
+        else if (fightReady()) startFight();
+        else if (vsT++ % 120 === 0) void assets.needFight([settings.char, rivalId()], fightStage); // reintenta si falló
+      }
     }
-    draw();
+    // Se dibuja solo cuando la simulación ha avanzado: en pantallas de 120 Hz son la mitad de frames y las
+    // animaciones de los menús (que cuentan frames dibujados) van a la misma velocidad que en 60 Hz.
+    if (n > 0) draw();
     if (touch) syncHint();
+    if (screen === 'select') { assets.ensureFighter(settings.char); if (settings.twoPlayers) assets.ensureFighter(settings.char2); }
+    if (screen === 'select' || screen === 'title') for (const id of [settings.char, settings.char2]) assets.ensurePortrait(id);
     requestAnimationFrame(loop);
   };
   requestAnimationFrame(loop);
+  // el resto de recursos, en segundo plano y por orden de uso (en pruebas ya se ha cargado todo)
+  const warmed = assets.warm([settings.char]);
+  // caché sin conexión: las visitas siguientes cargan de golpe y el juego funciona sin red
+  if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js?v=${__BUILD__}`).catch(() => undefined);
+    // lo descargado antes de que el worker tomara el control no pasó por él: al terminar la carga se le pasa la
+    // lista para que lo guarde (sale de la caché del navegador, apenas cuesta red)
+    void warmed.then(async () => {
+      const reg = await navigator.serviceWorker.ready;
+      const urls = performance.getEntriesByType('resource').map((e) => e.name).filter((u) => u.startsWith(location.origin));
+      reg.active?.postMessage({ type: 'cache', urls: [...new Set([location.origin + location.pathname, ...urls])] });
+    });
+  }
 }
 
 boot().catch((e) => {

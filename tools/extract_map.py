@@ -30,5 +30,6 @@ print(OUT, out.size)
 
 # Portada: Puerta de Tierra recortada a 16:9 (se quita algo de cielo y de empedrado).
 title = Image.open('assets/bg-puertatierra.webp').convert('RGB').crop((0, 60, 1536, 924))
-title.save('public/assets/ui/title-bg.webp', 'WEBP', quality=90, method=6)
+title = title.resize((1440, round(title.height * 1440 / title.width)), Image.LANCZOS)
+title.save('public/assets/ui/title-bg.webp', 'WEBP', quality=82, method=6)
 print('public/assets/ui/title-bg.webp', title.size)

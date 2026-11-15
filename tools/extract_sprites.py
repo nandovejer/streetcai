@@ -295,7 +295,9 @@ def extract(name, cfg, contact_dir=None):
         atlas.paste(Image.fromarray(rgba, 'RGBA'), (px, py))
         meta['frames'][fname] = {'x': px, 'y': py, 'w': w, 'h': h, 'ax': round(ax, 1), 's': scale}
     out = f'public/assets/fighters/{name}'
-    atlas.save(f'{out}/atlas.png', optimize=True)
+    # PNG de paleta (256 colores, sin tramado): el pixel art pierde poco y el archivo pesa ~4 veces menos.
+    # La transparencia es de todo o nada, así que la paleta no la altera.
+    atlas.quantize(colors=256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE).save(f'{out}/atlas.png', optimize=True)
     json.dump(meta, open(f'{out}/atlas.json', 'w'))
     # retrato con fondo transparente
     src, px0, py0, px1, py1 = cfg['portrait']
@@ -308,7 +310,7 @@ def extract(name, cfg, contact_dir=None):
     elif mode == 'strict':
         edge_despill(reg, alpha > 0)
     rgb = reg.astype(np.uint8); rgb[alpha == 0] = 0
-    Image.fromarray(np.dstack([rgb, alpha]), 'RGBA').save(f'{out}/portrait.png')
+    Image.fromarray(np.dstack([rgb, alpha]), 'RGBA').save(f'{out}/portrait.webp', quality=90, alpha_quality=100, method=6)
     if contact_dir:
         cs = Image.new('RGB', (1300, 8 * 190), (150, 40, 150))
         for ri, (anim, names) in enumerate(meta['anims'].items()):
@@ -343,5 +345,7 @@ if __name__ == '__main__':
     for sid, (path, box) in STAGES.items():
         os.makedirs(f'public/assets/stages/{sid}', exist_ok=True)
         bg = Image.open(path).convert('RGB').crop(box)
-        bg.save(f'public/assets/stages/{sid}/bg.webp', quality=90, method=6)
+        # el juego dibuja el escenario a 1440 px de ancho (720 lógicos x escala 2): más ancho solo pesa
+        w = min(1440, bg.width); bg = bg.resize((w, round(bg.height * w / bg.width)), Image.LANCZOS)
+        bg.save(f'public/assets/stages/{sid}/bg.webp', quality=82, method=6)
         print('bg', sid, bg.size)

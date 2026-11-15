@@ -77,13 +77,25 @@ Parámetros de URL para pruebas: `?demo=alba&vs=martin&ff=600` (IA contra IA ava
 
 ## Voces del locutor
 
-Generadas con [Piper TTS](https://github.com/OHF-Voice/piper1-gpl) (código abierto, sin conexión) con la voz `es_ES-sharvard-medium`, locutor masculino de español de España. Las frases están escritas "a la gaditana" para acercar el acento de Cádiz: seseo, eses y erres finales que se comen y expresiones como "picha" o "quillo". Pasan además por un filtro de locutor de recreativa (ffmpeg). Hay 35 MP3 en `public/assets/voice/`, unos 500 KB, y se regeneran con:
+Generadas con [Piper TTS](https://github.com/OHF-Voice/piper1-gpl) (código abierto, sin conexión) con la voz `es_ES-sharvard-medium`, locutor masculino de español de España. Las frases están escritas "a la gaditana" para acercar el acento de Cádiz: seseo, eses y erres finales que se comen y expresiones como "picha" o "quillo". Pasan además por un filtro de locutor de recreativa (ffmpeg). Hay 88 MP3 en `public/assets/voice/`, unos 1,2 MB, y se regeneran con:
 
 ```bash
 python tools/generate_voices.py <carpeta con es_ES-sharvard-medium.onnx y .onnx.json>
 ```
 
 Licencia de la voz: corpus Sharvard (Aubanel, García Lecumberri, Cooke, Cutugno, Borsky y Wolters), CC-BY 3.0, https://datashare.ed.ac.uk/handle/10283/574.
+
+## Rendimiento y carga
+
+Pensado para que arranque rápido en el móvil y pese poco (medido en el build de producción, con 4G simulada y sin caché):
+
+- **Carga por pantallas:** al arrancar solo se baja el código, la fuente y el fondo de la portada (~0,35 MB; la portada sale en menos de 1 s). El mapa, los retratos, los luchadores, los escenarios y las caras de derrota llegan en segundo plano (`Assets.warm`, de dos en dos y por orden de uso) o bajo demanda (`ensure*`): el luchador sobre el que está el cursor se pide primero. Si en el VS aún falta algo, el combate espera con "CARGANDO...". La exhibición solo usa lo ya descargado.
+- **Voces bajo demanda:** al arrancar solo las 16 frases comunes; las de cada luchador (`win_`, `super_`) y los "X contra Y" (`vs_`) se piden al ir a pelear, y se decodifican durante el VS. El siguiente rival del arcade se adelanta durante el combate.
+- **Peso:** atlas de luchadores en PNG de paleta (256 colores, sin tramado), retratos y escenarios en WebP (escenarios a 1440 px, que es lo que se dibuja). Los gráficos pasan de 10,4 a 4,4 MB y todo el juego de ~11,7 a ~5,5 MB. `tools/extract_*.py` ya generan así los archivos.
+- **Resolución interna adaptativa:** el lienzo es de 1280×720, o 640×360 si ocupa pocos píxeles reales (< 700) o si en pleno combate el dispositivo no mantiene ~48 fps (se recuerda en `localStorage`). Con la CPU 4× más lenta: 49 fps a 1280×720 y 60 fps a 640×360. `?lowq=1` fuerza la pequeña y `?hq=1` desactiva el cambio automático.
+- **Dibujo sincronizado con la simulación:** solo se dibuja cuando la simulación avanza, de modo que en pantallas de 120 Hz las animaciones de los menús van a la misma velocidad que en 60 Hz y se gasta la mitad.
+- **Sin cálculos repetidos:** el dígito de bombillas del CONTINUE, la silueta del luchador secreto y su versión del desfile se preparan una vez; los resplandores usan capas translúcidas en lugar de sombras difuminadas.
+- **Caché sin conexión** (`public/sw.js`): un service worker guarda el juego tras la primera carga y lo sirve sin red; la página (HTML) va primero a la red para ver las versiones nuevas. Cada despliegue estrena caché (`__BUILD__` en `vite.config.ts`). El manifiesto ya no fuerza el horizontal.
 
 ## Mecánicas
 

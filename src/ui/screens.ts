@@ -242,9 +242,11 @@ export function selectButtons(s: Settings): Button[] {
 /** Botón ¡A LUCHAR!: marco dorado con relieve pixelado, cuerpo rojo, texto con el degradado del título y brillo que late. */
 function drawFightButton(r: Renderer, b: Button, touch: boolean) {
   const c = r.ctx, glow = 0.5 + Math.sin(r.time * 0.1) * 0.5;
-  c.save(); c.shadowColor = '#ffb000'; c.shadowBlur = 6 + glow * 8;
+  // resplandor dorado en capas (más barato que una sombra difuminada)
+  c.fillStyle = '#ffb000';
+  for (let i = 4; i >= 1; i--) { c.globalAlpha = (0.05 + glow * 0.07) * (5 - i) / 2; c.fillRect(b.x - 3 - i * 2, b.y - 3 - i * 2, b.w + 6 + i * 4, b.h + 6 + i * 4); }
+  c.globalAlpha = 1;
   c.fillStyle = '#000'; c.fillRect(b.x - 3, b.y - 3, b.w + 6, b.h + 6);
-  c.restore();
   // marco dorado con luz arriba-izquierda y sombra abajo-derecha
   c.fillStyle = '#ffe27a'; c.fillRect(b.x - 2, b.y - 2, b.w + 4, b.h + 4);
   c.fillStyle = '#b07800'; c.fillRect(b.x, b.y + b.h, b.w + 2, 2); c.fillRect(b.x + b.w, b.y, 2, b.h + 2);
@@ -292,9 +294,9 @@ function drawStats(r: Renderer, id: FighterId, sx: number, y0: number, head: str
 /** Retrato grande sin marco, apoyado en el borde inferior (como en la selección de las recreativas). */
 function drawBigPortrait(r: Renderer, id: FighterId, side: 0 | 1, label: string, col: string) {
   const c = r.ctx, img = r.assets.portrait[id];
-  const h = 132, w = (img.width * h) / img.height;
+  const h = 132, w = img ? (img.width * h) / img.height : 140;
   if (SECRET.has(id)) r.drawSilhouette(id, side === 0 ? -4 : VW + 4 - w, VH - h, w, h, side === 1);
-  else {
+  else if (img) {
     c.save(); c.imageSmoothingEnabled = true;
     if (side === 0) c.drawImage(img, -4, VH - h, w, h);
     else { c.translate(VW + 4, VH - h); c.scale(-1, 1); c.drawImage(img, 0, 0, w, h); }
@@ -325,7 +327,7 @@ export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
   // mar de fondo y mapa
   c.fillStyle = '#00034a'; c.fillRect(-10, -10, VW + 20, VH + 20);
   c.save(); c.imageSmoothingEnabled = true;
-  c.drawImage(r.assets.map, MAP_X, MAP_Y, MAP_W, MAP_H);
+  if (r.assets.map) c.drawImage(r.assets.map, MAP_X, MAP_Y, MAP_W, MAP_H);
   c.restore();
   const blink = Math.floor(t / 10) % 2 === 0;
   const players: [FighterId, string, string][] = [[s.char, s.twoPlayers ? '1P' : 'TU', COL_J1]];
@@ -554,9 +556,10 @@ export function drawChampion(r: Renderer, winnerId: FighterId, loserId: FighterI
 
   // foto del ganador en el centro: entra con zoom y rebote
   const size = 150 * (pop < 1 ? 0.6 + 0.4 * pop + Math.sin(pop * Math.PI) * 0.12 : 1 + Math.sin(t * 0.06) * 0.015);
-  c.save(); c.shadowColor = '#ffd800'; c.shadowBlur = 18;
+  c.fillStyle = '#ffd800';
+  for (let i = 4; i >= 1; i--) { c.globalAlpha = 0.07 * (5 - i); c.fillRect(cx - size / 2 - 5 - i * 3, cy - size / 2 - 5 - i * 3, size + 10 + i * 6, size + 10 + i * 6); }
+  c.globalAlpha = 1;
   c.fillStyle = '#000'; c.fillRect(cx - size / 2 - 5, cy - size / 2 - 5, size + 10, size + 10);
-  c.restore();
   c.fillStyle = '#ffd800'; c.fillRect(cx - size / 2 - 3, cy - size / 2 - 3, size + 6, size + 6);
   r.drawPortrait(winnerId, cx - size / 2, cy - size / 2, size);
 
@@ -599,8 +602,8 @@ const BULB_DIGITS: Record<string, string[]> = {
   '9': ['.####.', '##..##', '##..##', '##..##', '.#####', '....##', '##..##', '.####.'],
 };
 
-function drawBulbs(r: Renderer, digit: string, x0: number, y0: number, pitch: number, glow: number) {
-  const c = r.ctx, rows = BULB_DIGITS[digit] || BULB_DIGITS['0'], rad = pitch * 0.46;
+function paintBulbs(c: CanvasRenderingContext2D, digit: string, x0: number, y0: number, pitch: number, glow: number) {
+  const rows = BULB_DIGITS[digit] || BULB_DIGITS['0'], rad = pitch * 0.46;
   for (let j = 0; j < 8; j++) for (let i = 0; i < 6; i++) {
     const x = x0 + i * pitch + pitch / 2, y = y0 + j * pitch + pitch / 2, lit = rows[j][i] === '#';
     if (lit) {
@@ -617,6 +620,21 @@ function drawBulbs(r: Renderer, digit: string, x0: number, y0: number, pitch: nu
     }
     c.beginPath(); c.arc(x, y, rad, 0, Math.PI * 2); c.fill();
   }
+}
+
+/** Cada dígito se pinta una vez por nivel de brillo (con ~100 degradados) y después solo se copia. */
+const bulbCache = new Map<string, HTMLCanvasElement>();
+function drawBulbs(r: Renderer, digit: string, x0: number, y0: number, pitch: number, glow: number) {
+  const lvl = Math.round(glow * 6) / 6, k = r.scale, key = `${digit}|${pitch}|${lvl}|${k}`, m = pitch * 2;
+  let cv = bulbCache.get(key);
+  if (!cv) {
+    cv = document.createElement('canvas');
+    cv.width = Math.ceil((6 * pitch + m * 2) * k); cv.height = Math.ceil((8 * pitch + m * 2) * k);
+    const k2 = cv.getContext('2d')!; k2.scale(k, k);
+    paintBulbs(k2, digit, m, m, pitch, lvl);
+    bulbCache.set(key, cv);
+  }
+  r.ctx.drawImage(cv, x0 - m, y0 - m, cv.width / k, cv.height / k);
 }
 
 function gradText(r: Renderer, s: string, x: number, y: number, size: number, top: string, bottom: string, align: CanvasTextAlign = 'left') {
@@ -691,10 +709,11 @@ function wrap(s: string, max: number): string[] {
 }
 
 /** Imagen encajada (cover) en un recuadro con marco, al estilo de las caras de la pantalla de CONTINUE. */
-function framedImage(r: Renderer, img: HTMLImageElement, x: number, y: number, w: number, h: number, grey: number) {
+function framedImage(r: Renderer, img: HTMLImageElement | undefined, x: number, y: number, w: number, h: number, grey: number) {
   const c = r.ctx;
   c.fillStyle = '#ffd800'; c.fillRect(x - 3, y - 3, w + 6, h + 6);
   c.fillStyle = '#000'; c.fillRect(x - 1, y - 1, w + 2, h + 2);
+  if (!img) return; // aún descargando
   const s = Math.max(w / img.width, h / img.height), sw = w / s, sh = h / s;
   c.save();
   c.imageSmoothingEnabled = true;

@@ -89,6 +89,9 @@ export class AudioManager {
     }
   }
 
+  /** Decodifica ya las frases (cuando ya se han descargado) para que suenen sin retraso al usarlas. */
+  prime(ids: string[]) { for (const id of ids) void this.decodeVoice(id); }
+
   private async decodeVoice(id: string): Promise<AudioBuffer | null> {
     const have = this.voiceBuf.get(id);
     if (have || !this.ctx) return have || null;

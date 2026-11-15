@@ -9,7 +9,8 @@ interface Petal { x: number; y: number; vx: number; vy: number; ph: number; colo
 interface Gull { x: number; y: number; vx: number; ph: number; size: number }
 
 export const FONT = '"Press Start 2P", monospace';
-export const SCALE = 2;
+/** Píxeles internos por píxel lógico: 2 normal, 1 en pantallas pequeñas o móviles lentos (ver main.ts). */
+export const MAX_SCALE = 2;
 
 export class Renderer {
   ctx: CanvasRenderingContext2D;
@@ -24,9 +25,10 @@ export class Renderer {
   private camX = (STAGE_W - VW) / 2;
   time = 0;
   debug = false;
+  scale = MAX_SCALE;
 
   constructor(public canvas: HTMLCanvasElement, public assets: Assets) {
-    canvas.width = VW * SCALE; canvas.height = VH * SCALE;
+    canvas.width = VW * this.scale; canvas.height = VH * this.scale;
     this.ctx = canvas.getContext('2d', { alpha: false })!;
     this.tint = document.createElement('canvas'); this.tint.width = 256; this.tint.height = 256;
     this.tctx = this.tint.getContext('2d')!;
@@ -34,6 +36,12 @@ export class Renderer {
     for (let i = 0; i < 16; i++) {
       this.petals.push({ x: Math.random() * VW, y: Math.random() * VH, vx: -0.25 - Math.random() * 0.4, vy: 0.15 + Math.random() * 0.3, ph: Math.random() * 6, color: cols[i % cols.length] });
     }
+  }
+
+  /** Cambia la resolución interna del lienzo (la lógica y el dibujo no cambian: solo cuántos píxeles se pintan). */
+  setScale(k: number) {
+    if (k === this.scale) return;
+    this.scale = k; this.canvas.width = VW * k; this.canvas.height = VH * k;
   }
 
   text(s: string, x: number, y: number, size: number, color: string, align: CanvasTextAlign = 'center', outline: string | null = '#000') {
@@ -56,11 +64,13 @@ export class Renderer {
   begin(shake = 0) {
     const c = this.ctx;
     const sx = shake > 0.3 ? (Math.random() - 0.5) * shake : 0, sy = shake > 0.3 ? (Math.random() - 0.5) * shake : 0;
-    c.setTransform(SCALE, 0, 0, SCALE, Math.round(sx * SCALE), Math.round(sy * SCALE));
+    const k = this.scale;
+    c.setTransform(k, 0, 0, k, Math.round(sx * k), Math.round(sy * k));
   }
 
   drawStage(camX: number, dim = 0) {
     const c = this.ctx, bg = this.assets.stages[this.stage];
+    if (!bg) { c.fillStyle = '#0a0a1a'; c.fillRect(-10, -10, VW + 20, VH + 20); return; } // aún descargando
     const s = STAGE_W / bg.width, h = bg.height * s;
     c.imageSmoothingEnabled = true;
     c.drawImage(bg, -camX - 4, VH - h, STAGE_W + 8, h + 4);
@@ -118,7 +128,9 @@ export class Renderer {
 
   /** Dibuja un frame del atlas con los pies en (sx, sy). */
   drawSprite(id: string, frame: string, sx: number, sy: number, facing: number, scale = SPRITE_SCALE, flash = 0) {
-    const a = this.assets.atlas[id], fr = a.frames[frame] || a.frames['idle_0'];
+    const a = this.assets.atlas[id];
+    if (!a) return; // aún descargando
+    const fr = a.frames[frame] || a.frames['idle_0'];
     const s = fr.s * scale, dw = fr.w * s, dh = fr.h * s;
     const c = this.ctx;
     c.save();
@@ -260,6 +272,26 @@ export class Renderer {
     }
   }
 
+  private blackFrames = new Map<string, HTMLCanvasElement>();
+  /** Como drawSprite pero todo en negro (luchador secreto); cada frame se tiñe una sola vez. */
+  drawSpriteBlack(id: string, frame: string, sx: number, sy: number, facing: number, scale = SPRITE_SCALE) {
+    const a = this.assets.atlas[id];
+    if (!a) return;
+    const fr = a.frames[frame] || a.frames['idle_0'], key = id + '|' + frame;
+    let cv = this.blackFrames.get(key);
+    if (!cv) {
+      cv = document.createElement('canvas'); cv.width = fr.w; cv.height = fr.h;
+      const k = cv.getContext('2d')!;
+      k.drawImage(a.img, fr.x, fr.y, fr.w, fr.h, 0, 0, fr.w, fr.h);
+      k.globalCompositeOperation = 'source-atop'; k.fillStyle = '#000'; k.fillRect(0, 0, fr.w, fr.h);
+      this.blackFrames.set(key, cv);
+    }
+    const s = fr.s * scale, c = this.ctx;
+    c.save(); c.translate(Math.round(sx), Math.round(sy)); c.scale(facing, 1);
+    c.drawImage(cv, -fr.ax * s, -fr.h * s, fr.w * s, fr.h * s);
+    c.restore();
+  }
+
   /** Recuadro de luchador secreto: fondo oscuro y una interrogación que late. */
   drawSecret(x: number, y: number, size: number) {
     const c = this.ctx, pulse = 0.85 + Math.sin(this.time * 0.12) * 0.15;
@@ -271,20 +303,38 @@ export class Renderer {
     c.restore();
   }
 
+  private silhouettes = new Map<string, HTMLCanvasElement>();
+  /** Silueta negra con halo de un retrato, preparada una sola vez (el filtro es caro de aplicar cada frame). */
+  private silhouette(id: string, img: HTMLImageElement) {
+    let cv = this.silhouettes.get(id);
+    if (!cv) {
+      const m = 12;
+      cv = document.createElement('canvas'); cv.width = img.width + m * 2; cv.height = img.height + m * 2;
+      const k = cv.getContext('2d')!;
+      k.filter = 'brightness(0) drop-shadow(0 0 4px #b040ff)'; k.drawImage(img, m, m);
+      this.silhouettes.set(id, cv);
+    }
+    return cv;
+  }
+
   /** Silueta negra de un retrato (luchador secreto), con un "?" encima. */
   drawSilhouette(id: string, x: number, y: number, w: number, h: number, flip = false) {
     const c = this.ctx, img = this.assets.portrait[id];
-    c.save(); c.imageSmoothingEnabled = true; c.filter = 'brightness(0) drop-shadow(0 0 4px #b040ff)';
-    if (flip) { c.translate(x + w, y); c.scale(-1, 1); c.drawImage(img, 0, 0, w, h); } else c.drawImage(img, x, y, w, h);
-    c.restore();
+    if (img) {
+      const cv = this.silhouette(id, img), k = w / img.width, m = 12 * k, W = cv.width * k, H = cv.height * k;
+      c.save(); c.imageSmoothingEnabled = true;
+      if (flip) { c.translate(x + w, y); c.scale(-1, 1); c.drawImage(cv, -m, -m, W, H); } else c.drawImage(cv, x - m, y - m, W, H);
+      c.restore();
+    }
     this.text('?', x + w / 2, y + h * 0.42, Math.round(h * 0.4), '#ffd800', 'center', '#000');
   }
 
   drawPortrait(id: string, x: number, y: number, size: number, flip = false) {
     const c = this.ctx, img = this.assets.portrait[id];
+    c.fillStyle = '#141a33'; c.fillRect(x, y, size, size);
+    if (!img) return; // aún descargando
     const s = Math.min(img.width, img.height), ox = (img.width - s) / 2;
     c.save(); c.imageSmoothingEnabled = true;
-    c.fillStyle = '#141a33'; c.fillRect(x, y, size, size);
     if (flip) { c.translate(x + size, y); c.scale(-1, 1); c.drawImage(img, ox, 0, s, s, 0, 0, size, size); }
     else c.drawImage(img, ox, 0, s, s, x, y, size, size);
     c.imageSmoothingEnabled = false; c.restore();

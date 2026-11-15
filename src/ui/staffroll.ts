@@ -114,9 +114,9 @@ export function drawStaffRoll(r: Renderer, t: number, touch: boolean) {
   FIGHTER_IDS.forEach((id, i) => {
     const x = ((t * 0.7 + i * gap) % (VW + 160)) - 80;
     c.fillStyle = 'rgba(0,0,0,0.6)'; c.beginPath(); c.ellipse(x, GROUND_Y + 23, 14, 2.5, 0, 0, Math.PI * 2); c.fill();
-    if (SECRET.has(id)) { c.save(); c.filter = 'brightness(0)'; }
-    r.drawSprite(id, `walk_${Math.floor(t / 6 + i) % 8}`, x, GROUND_Y + 24, 1, 0.42);
-    if (SECRET.has(id)) c.restore();
+    const fr = `walk_${Math.floor(t / 6 + i) % 8}`;
+    if (SECRET.has(id)) r.drawSpriteBlack(id, fr, x, GROUND_Y + 24, 1, 0.42);
+    else r.drawSprite(id, fr, x, GROUND_Y + 24, 1, 0.42);
   });
   if (Math.floor(t / 40) % 2 === 0) r.text(touch ? 'TOCA PARA SALIR' : 'ENTER O ESC PARA SALIR', 8, 10, 5, '#5a5a8a', 'left');
 }
