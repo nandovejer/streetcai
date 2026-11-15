@@ -2,7 +2,7 @@
 
 Juego de lucha arcade 2D en el navegador (escritorio y móvil), ambientado en Cádiz.
 
-- **Luchadores:** Chapa (El Guerrero), Ares (El Viajero), Alba (El Marinero), Martín (El Veterano) y Selu (El Dúo).
+- **Luchadores:** Chapa (El Guerrero), Ares (El Viajero), Alba (El Marinero), Martín (El Veterano), Selu (El Dúo) y Canijo (El Ogro).
 - **Escenarios:** el barrio de cada luchador (Candelaria, Santa María, La Caleta y Teatro Falla) y la Plaza de las Flores. En la selección: "BARRIO RIVAL" (se lucha en el barrio del rival, como en las recreativas) o "AL AZAR" (cualquiera, incluida la Plaza).
 
 ## Créditos y agradecimientos
@@ -23,11 +23,11 @@ Puerta de Tierra de fondo. La primera vez se ve una intro de unos 3 s: la cámar
 
 ## Selección de luchador
 
-Al estilo de las recreativas: arriba el mapa de Cádiz con el barrio de cada luchador (Chapa en el Baluarte de la Candelaria, Ares en la playa de Santa María del Mar, Alba en La Caleta y Martín en el Teatro Falla). El cursor 1P (y 2P) se desliza por el mapa al cambiar de luchador. Abajo, el retrato grande del elegido y la fila de caras; las opciones de modo, dificultad y escenario van en la esquina del mar. Se puede elegir tocando la cara o el barrio en el mapa.
+Al estilo de las recreativas: arriba el mapa de Cádiz con el barrio de cada luchador (Chapa en el Baluarte de la Candelaria, Ares en la playa de Santa María del Mar, Alba en La Caleta, Martín en el Teatro Falla, Selu en la Plaza de las Flores y Canijo fuera de Cádiz, en alta mar; su escenario es La Caleta). El cursor 1P (y 2P) se desliza por el mapa al cambiar de luchador. Abajo, el retrato grande del elegido y la fila de caras; las opciones de modo, dificultad y escenario van en la esquina del mar. Se puede elegir tocando la cara o el barrio en el mapa.
 
 ## Modos
 
-- **1P Arcade:** eliges luchador y te enfrentas a los otros tres en orden aleatorio, con pantalla de VS antes de cada combate. Si pierdes, CONTINUE repite el mismo rival; si ganas a los tres, eres campeón.
+- **1P Arcade:** eliges luchador y te enfrentas a los otros cinco en orden aleatorio, con pantalla de VS antes de cada combate. Si pierdes, CONTINUE repite el mismo rival; si ganas a todos, eres campeón.
 - **2 jugadores:** cada uno elige su luchador (no puede repetirse) y combaten en el mismo teclado.
 
 ## Arrancar
@@ -114,7 +114,7 @@ Añadir un escenario: imagen en `documentacion/` + entrada en `STAGES` de `tools
 ## Decisiones respecto al plan técnico
 
 - **Canvas 2D propio en lugar de Phaser**: menos peso en móvil, simulación determinista a 60 Hz testeable en Node y cero dependencias de runtime. La arquitectura (escenas, luchador, combate, sistemas, UI) sigue la del plan.
-- **Sprites recortados de las láminas**: el plan pedía no usar las láminas como spritesheet, pero son el único arte disponible. Se recortan frame a frame con transparencia real, ancla en los pies y escala normalizada. Chapa sale entero de la lámina con croma verde (`fighter-chapa-chroma.png`). De la lámina croma de Ares solo se usan idle, walk y el retrato: en el resto de filas el personaje lleva otra ropa, así que esas siguen saliendo de la lámina original. Las láminas de Alba y Martín usan croma verde puro: se recortan con un modo más estricto que además quita la sombra pintada bajo los pies, los rótulos pegados y cualquier verde derramado sobre el personaje. Martín sale de `fighter-martin-optimo.png` (lámina regenerada con colores coherentes); en ella la fila de caminar está dibujada más grande que la de reposo y su escala lo compensa.
+- **Sprites recortados de las láminas**: el plan pedía no usar las láminas como spritesheet, pero son el único arte disponible. Se recortan frame a frame con transparencia real, ancla en los pies y escala normalizada. Chapa sale entero de la lámina con croma verde (`fighter-chapa-chroma.png`). De la lámina croma de Ares solo se usan idle, walk y el retrato: en el resto de filas el personaje lleva otra ropa, así que esas siguen saliendo de la lámina original. Las láminas de Alba y Martín usan croma verde puro: se recortan con un modo más estricto que además quita la sombra pintada bajo los pies, los rótulos pegados y cualquier verde derramado sobre el personaje. Martín sale de `fighter-martin-optimo.png` (lámina regenerada con colores coherentes); en ella la fila de caminar está dibujada más grande que la de reposo y su escala lo compensa. Canijo es un ogro verde sobre croma verde: usa un modo propio (`ogre`) que solo quita el verde saturado del fondo y el halo del borde, sin tocar la piel ni el vestido.
 
 ## Recursos gráficos pendientes
 

@@ -65,11 +65,11 @@ const BASE_MOVES: Record<MoveId, MoveData> = {
 };
 
 /** Luchadores disponibles, en el orden en que aparecen en la selección. */
-export const FIGHTER_IDS = ['chapa', 'ares', 'alba', 'martin', 'selu'] as const;
+export const FIGHTER_IDS = ['chapa', 'ares', 'alba', 'martin', 'selu', 'canijo'] as const;
 export type FighterId = (typeof FIGHTER_IDS)[number];
 
 /** Escenario del barrio de cada luchador (el suyo en el mapa de la selección). */
-export const HOME_STAGE: Record<FighterId, StageId> = { chapa: 'candelaria', ares: 'santamaria', alba: 'caleta', martin: 'falla', selu: 'plaza' };
+export const HOME_STAGE: Record<FighterId, StageId> = { chapa: 'candelaria', ares: 'santamaria', alba: 'caleta', martin: 'falla', selu: 'plaza', canijo: 'caleta' };
 
 export interface FighterDef {
   id: FighterId;
@@ -128,6 +128,12 @@ export const FIGHTERS: Record<FighterId, FighterDef> = {
     id: 'selu', name: 'SELU', title: 'EL DUO', maxHp: 140, walk: 2.4, jumpV: 10.6, jumpVx: 2.7, power: 1.0,
     specialName: 'CHIRIGOTA', proj: { speed: 5.0, damage: 11, core: '#fff0ff', glow: '#b040ff', size: 15 },
     stats: { fuerza: 3, velocidad: 3, tecnica: 4, aguante: 3 }, moves: scaleMoves(1.0, 1.06),
+  },
+  // Ogro llegado por mar, de nacionalidad desconocida: lucha torpe y fuerza bruta. Lento y muy duro.
+  canijo: {
+    id: 'canijo', name: 'CANIJO', title: 'EL OGRO', maxHp: 150, walk: 1.9, jumpV: 10.0, jumpVx: 2.3, power: 1.08,
+    specialName: 'ERUCTO', proj: { speed: 4.0, damage: 13, core: '#efffc8', glow: '#6fbf2a', size: 18 },
+    stats: { fuerza: 5, velocidad: 2, tecnica: 2, aguante: 5 }, moves: scaleMoves(1.22, 1.04),
   },
 };
 

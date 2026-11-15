@@ -7,6 +7,9 @@ Dos tipos de lámina:
   - 'dark':   fondo azul oscuro (láminas originales).
   - 'pure':   croma verde puro (~0,250,0) con verde derramado sobre el personaje
               (Alba, Martín): recorte estricto + despill de todo el cuerpo.
+  - 'ogre':   croma verde puro con un personaje que también es verde (Canijo: piel de ogro y
+              vestido verde). Solo se quita el verde saturado del fondo y el halo del borde; nada de
+              despill sobre el cuerpo, que lo volvería marrón.
 """
 import json, sys
 from PIL import Image
@@ -20,6 +23,7 @@ SOURCES = {
     'alba': ('documentacion/fighter-alba.png', 'pure'),
     'martin': ('documentacion/fighter-martin-optimo.png', 'pure'),
     'selu': ('documentacion/fighter-selu.png', 'pure'),
+    'canijo': ('documentacion/fighter-canijo.png', 'ogre'),
 }
 
 # fila: (fuente, y0, y1, x0, x1, nframes, escala)
@@ -102,6 +106,27 @@ FIGHTERS = {
             'jumpkick': [0, 1, 2, 3, 1, 4],     # el 4 (caída) reutiliza el de despegue
         },
     },
+    # Canijo: misma distribución que Selu (7 idle/walk, 5 puñetazo, 5 patada en salto). Las filas de
+    # acción están dibujadas algo más pequeñas que las de reposo; su escala lo compensa.
+    'canijo': {
+        'portrait': ('canijo', 18, 87, 246, 259),  # (x0, y0, x1, y1)
+        'rows': {
+            'idle':     ('canijo', 40, 186, 478, 1200, 7, 1.0),
+            'walk':     ('canijo', 230, 380, 474, 1200, 7, 1.0),
+            'punch':    ('canijo', 544, 676, 8, 568, 5, 1.12),
+            'kick':     ('canijo', 528, 676, 586, 1200, 6, 1.12),
+            'jump':     ('canijo', 684, 856, 8, 568, 6, 1.12),
+            'jumpkick': ('canijo', 718, 856, 586, 1200, 5, 1.12),
+            'hit':      ('canijo', 896, 1024, 8, 574, 6, 1.12),
+            'ko':       ('canijo', 904, 1022, 594, 1200, 5, 1.12),
+        },
+        'order': {
+            'idle': [0, 1, 2, 3, 3, 4, 5, 6],
+            'walk': [0, 1, 2, 3, 4, 5, 6, 6],
+            'punch': [0, 1, 2, 3, 3, 4],        # guardia, golpe, golpe, extendido, extendido, guardia
+            'jumpkick': [0, 1, 2, 3, 3, 4],     # agachado, despegue, patada, patada, aterrizaje
+        },
+    },
 }
 
 _cache = {}
@@ -116,6 +141,9 @@ def green(reg, mode='chroma'):
     if mode == 'pure':
         # verde puro y también la sombra verde oscura que la lámina pinta bajo los pies
         return (g > 60) & (g > 1.6 * np.maximum(r, b) + 30)
+    if mode == 'ogre':
+        # solo el verde croma saturado: la piel verde-oliva y el vestido tienen más rojo/azul
+        return (g > 150) & (g > 2 * np.maximum(r, b) + 20)
     return (g > r + 30) & (g > b + 30)
 
 def despill(sub, mask):
@@ -131,10 +159,18 @@ def despill(sub, mask):
     mixed[..., 1] = np.minimum(mixed[..., 1], np.maximum(mixed[..., 0], mixed[..., 2]) + 4)
     sub[over] = np.clip(mixed[over], 0, 255).astype(sub.dtype)
 
+def edge_despill(sub, mask):
+    """Halo croma solo en el borde (3 px): los píxeles mucho más verdes que la piel del ogro pierden
+    el exceso de verde. El interior no se toca."""
+    edge = mask & ~ndi.binary_erosion(mask, iterations=3)
+    r, g, b = sub[..., 0], sub[..., 1], sub[..., 2]
+    hot = edge & (g > 1.45 * np.maximum(r, b) + 25)
+    sub[hot, 1] = (np.maximum(r, b)[hot] * 1.15 + 12).astype(sub.dtype)
+
 def cut_frames(reg, mode, n, tag):
     """Devuelve lista de (rgba, ancla_x) ordenada de izquierda a derecha."""
     r, g, b = reg[..., 0], reg[..., 1], reg[..., 2]
-    if mode in ('chroma', 'pure'):
+    if mode in ('chroma', 'pure', 'ogre'):
         fg = ~green(reg, mode)
     else:
         fg = (reg.max(axis=2) > 44) | (b > 37)
@@ -148,7 +184,7 @@ def cut_frames(reg, mode, n, tag):
     out = []
     for bi in bodies:
         m = (lab == bi + 1) & fg
-        if mode == 'pure':
+        if mode in ('pure', 'ogre'):
             # quedarse con el cuerpo: fuera letras de los rótulos y chispas sueltas
             l2, k2 = ndi.label(m, structure=np.ones((3, 3)))
             if k2 > 1:
@@ -179,6 +215,8 @@ def cut_frames(reg, mode, n, tag):
         mm = m[y0:y1, x0:x1]
         if mode == 'pure':
             despill(sub, mm)
+        elif mode == 'ogre':
+            edge_despill(sub, mm)
         elif mode == 'chroma':
             edge = mm & ~ndi.binary_erosion(mm, iterations=2)
             spill = edge & (sub[..., 1] > np.maximum(sub[..., 0], sub[..., 2]))
@@ -224,10 +262,12 @@ def extract(name, cfg, contact_dir=None):
     src, px0, py0, px1, py1 = cfg['portrait']
     im, mode = load(src)
     reg = im[py0:py1, px0:px1]
-    alpha = np.where(green(reg, mode), 0, 255).astype(np.uint8) if mode in ('chroma', 'pure') else np.full(reg.shape[:2], 255, np.uint8)
+    alpha = np.where(green(reg, mode), 0, 255).astype(np.uint8) if mode in ('chroma', 'pure', 'ogre') else np.full(reg.shape[:2], 255, np.uint8)
     reg = reg.copy()
     if mode == 'pure':
         despill(reg, alpha > 0)
+    elif mode == 'ogre':
+        edge_despill(reg, alpha > 0)
     rgb = reg.astype(np.uint8); rgb[alpha == 0] = 0
     Image.fromarray(np.dstack([rgb, alpha]), 'RGBA').save(f'{out}/portrait.png')
     if contact_dir:

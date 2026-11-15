@@ -188,6 +188,8 @@ export const HOMES: Record<FighterId, { x: number; y: number; place: string }> =
   alba: { x: 342, y: 600, place: 'LA CALETA' },
   martin: { x: 592, y: 346, place: 'TEATRO FALLA' },
   selu: { x: 742, y: 478, place: 'PLAZA DE LAS FLORES' },
+  // fuera de Cádiz: llega por mar (arriba a la izquierda, en mar abierto)
+  canijo: { x: 128, y: 150, place: 'EN ALTA MAR' },
 };
 const CARD = 56, CARD_GAP = 6, CARD_Y = 270;
 const cardX = (i: number) => (VW - (FIGHTER_IDS.length * CARD + (FIGHTER_IDS.length - 1) * CARD_GAP)) / 2 + i * (CARD + CARD_GAP);
@@ -476,6 +478,11 @@ export const WIN_QUOTES: Record<FighterId, string[]> = {
     'TENGO MAS AÑOS EN EL FALLA QUE TU EN EL MUNDO, CHIQUILLO.',
     'QUITATE EL SOMBRERO ANTE LA EXPERIENCIA.',
     'EL CONCURSO SE GANA CON TABLAS, NO CON PRISAS.',
+  ],
+  canijo: [
+    'VENGO DE UN PANTANO QUE NO SALE EN TU MAPA, QUILLO.',
+    '¿TANTO NADAR HASTA CAI PARA ESTO? ME ESPERABA MAS.',
+    'CANIJO ME LLAMAN. Y TU AHORA, ¿COMO TE LLAMAS? ¿SUELO?',
   ],
   selu: [
     'SOMOS DOS Y TU NI UNO ENTERO, QUILLO.',

@@ -18,6 +18,7 @@ FIGHTERS = {  # id: (nombre hablado, especial hablado)
     'alba': ('Alba', 'Marejá'),
     'martin': ('Martín', 'Sombreraso'),
     'selu': ('Selu', 'Chirigota'),
+    'canijo': ('Canijo', 'Eruto'),
 }
 
 def phrases():

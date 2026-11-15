@@ -12,14 +12,20 @@ SOURCES = {
     'alba': 'documentacion/alba-derrotado.png',
     'martin': 'documentacion/martin-derrotado.png',
     'selu': 'documentacion/selu-derrotado.png',
+    'canijo': 'documentacion/canijo-derrotado.png',
 }
+# Personajes verdes (Canijo es un ogro): solo se quita el verde croma saturado, no la piel.
+STRICT = {'canijo'}
 OUT_W = 420  # ancho final (px); se dibuja suavizado a ~210 px lógicos
 
 
 def extract(fid, path):
     reg = np.array(Image.open(path).convert('RGB')).astype(np.int32)
     r, g, b = reg[..., 0], reg[..., 1], reg[..., 2]
-    fg = ~((g > r + 30) & (g > b + 30))
+    if fid in STRICT:
+        fg = ~((g > 150) & (g > 2 * np.maximum(r, b) + 20))
+    else:
+        fg = ~((g > r + 30) & (g > b + 30))
     lab, k = ndi.label(fg)
     areas = ndi.sum(fg, lab, range(1, k + 1))
     m = lab == (int(np.argmax(areas)) + 1)
@@ -29,7 +35,8 @@ def extract(fid, path):
     mm = m[y0:y1, x0:x1]
     # quitar el halo verde del borde
     edge = mm & ~ndi.binary_erosion(mm, iterations=3)
-    spill = edge & (sub[..., 1] > np.maximum(sub[..., 0], sub[..., 2]))
+    mx = np.maximum(sub[..., 0], sub[..., 2])
+    spill = edge & (sub[..., 1] > (1.45 * mx + 25 if fid in STRICT else mx))
     sub[spill, 1] = np.maximum(sub[..., 0], sub[..., 2])[spill]
     rgba = np.dstack([sub.astype(np.uint8), (mm * 255).astype(np.uint8)])
     rgba[~mm, :3] = 0
