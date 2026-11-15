@@ -191,12 +191,17 @@ export const HOMES: Record<FighterId, { x: number; y: number; place: string }> =
   // fuera de Cádiz: llega por mar (arriba a la izquierda, en mar abierto)
   canijo: { x: 128, y: 150, place: 'EN ALTA MAR' },
 };
-/** Caras en bloque de 3 por fila, en el mar bajo la isla (entre La Caleta y Santa María). */
-const CARD = 50, CARD_GAP = 6, CARD_COLS = 3, GRID_X = 184, GRID_Y = 212;
+/**
+ * Caras en dos filas en el mar bajo la isla (entre La Caleta y Santa María). Al añadir luchadores, las filas
+ * crecen hacia la derecha (hay mar libre hasta ~x 520): 3 columnas con 6, 4 con 8... hasta 6.
+ */
+const CARD = 50, CARD_GAP = 6, GRID_X = 184, GRID_Y = 212;
+const CARD_COLS = Math.min(6, Math.max(3, Math.ceil(FIGHTER_IDS.length / 2)));
 const GRID_W = CARD_COLS * CARD + (CARD_COLS - 1) * CARD_GAP, GRID_CX = GRID_X + GRID_W / 2;
 const cardX = (i: number) => GRID_X + (i % CARD_COLS) * (CARD + CARD_GAP);
 const cardY = (i: number) => GRID_Y + Math.floor(i / CARD_COLS) * (CARD + CARD_GAP);
-const OPT_X = 6, OPT_W = 108;
+/** Opciones (modo, dificultad, escenario) en la columna derecha, bajo los botones del sistema. */
+const OPT_W = 108, OPT_X = VW - 6 - OPT_W, OPT_Y = 24;
 /** Posición animada de los cursores sobre el mapa (se deslizan de un barrio a otro). */
 const mapCursor: [number, number][] = [[0, 0], [0, 0]];
 let mapCursorInit = false;
@@ -208,7 +213,7 @@ export function selectButtons(s: Settings): Button[] {
     const [hx, hy] = mapPt(HOMES[id].x, HOMES[id].y);
     b.push({ x: hx - 12, y: hy - 12, w: 24, h: 24, label: '', action: 'char:' + id, kind: 'home' });
   });
-  let y = 14;
+  let y = OPT_Y + 14;
   const opt = (label: string, action: string, on: boolean) => { b.push({ x: OPT_X, y, w: OPT_W, h: 13, label, action, on, kind: 'opt' }); y += 15; };
   opt('1P ARCADE', 'mode:cpu', !s.twoPlayers);
   opt('2 JUGADORES', 'mode:2p', s.twoPlayers);
@@ -297,34 +302,29 @@ export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
   });
 
   // opciones (mar de la esquina superior izquierda)
-  r.text('MODO', OPT_X, 7, 6, '#9ab0ff', 'left');
-  r.text('DIFICULTAD', OPT_X, 51, 6, '#9ab0ff', 'left');
-  r.text('ESCENARIO', OPT_X, 109, 6, '#9ab0ff', 'left');
+  // columna derecha: opciones
+  r.text('MODO', OPT_X, OPT_Y + 7, 6, '#9ab0ff', 'left');
+  r.text('DIFICULTAD', OPT_X, OPT_Y + 51, 6, '#9ab0ff', 'left');
+  r.text('ESCENARIO', OPT_X, OPT_Y + 109, 6, '#9ab0ff', 'left');
   const bs = selectButtons(s);
   for (const b of bs) if (b.kind === 'opt') drawButton(r, b, 6);
   // escenario del próximo combate cuando es el barrio del rival
   if (s.stage === 'home') {
     const rival = s.twoPlayers ? s.char2 : null;
-    r.text(rival ? STAGES[HOME_STAGE[rival]].name : 'EL DE CADA RIVAL', OPT_X, 158, 5, '#ffd800', 'left');
+    r.text(rival ? STAGES[HOME_STAGE[rival]].name : 'EL DE CADA RIVAL', OPT_X, OPT_Y + 158, 5, '#ffd800', 'left');
   }
-  if (!touch) r.text('A/D ELEGIR - E ESCENARIO', OPT_X, 170, 5, '#9ab0ff', 'left');
+  // (en 2 jugadores ahí va el nombre del 2P)
+  if (!touch && !s.twoPlayers) {
+    r.text('A/D: ELEGIR LUCHADOR', OPT_X, OPT_Y + 172, 5, '#9ab0ff', 'left');
+    r.text('E: CAMBIAR ESCENARIO', OPT_X, OPT_Y + 182, 5, '#9ab0ff', 'left');
+  }
 
-  // columna derecha: estadísticas del J1
-  const rx = VW - 106;
-  drawStats(r, s.char, rx, 48, s.twoPlayers ? '1P' : 'TU', COL_J1);
+  // columna izquierda: estadísticas del J1, encima de su retrato grande
+  drawStats(r, s.char, 8, 34, FIGHTERS[s.char].title, COL_J1);
 
-  // retratos grandes y rivales
+  // retratos grandes
   drawBigPortrait(r, s.char, 0, s.twoPlayers ? '1P' : 'TU', COL_J1);
   if (s.twoPlayers) drawBigPortrait(r, s.char2, 1, '2P', COL_J2);
-  else {
-    r.text('RIVALES', VW - 8, 236, 7, COL_J2, 'right');
-    FIGHTER_IDS.filter((id) => id !== s.char).forEach((id, k) => {
-      const yy = 246 + k * 23;
-      c.fillStyle = '#000'; c.fillRect(VW - 30, yy - 1, 23, 23);
-      r.drawPortrait(id, VW - 29, yy, 21);
-      r.text(FIGHTERS[id].name, VW - 35, yy + 11, 6, '#d8d8e8', 'right');
-    });
-  }
 
   // fila de caras
   const head = s.twoPlayers && touch ? `TOCA UN RETRATO PARA ELEGIR ${s.pickTurn ? '2P' : '1P'}` : 'ELIGE TU LUCHADOR';

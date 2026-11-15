@@ -23,11 +23,11 @@ Puerta de Tierra de fondo. La primera vez se ve una intro de unos 3 s: la cámar
 
 ## Selección de luchador
 
-Al estilo de las recreativas: arriba el mapa de Cádiz con el barrio de cada luchador (Chapa en el Baluarte de la Candelaria, Ares en la playa de Santa María del Mar, Alba en La Caleta, Martín en el Teatro Falla, Selu en la Plaza de las Flores y Canijo fuera de Cádiz, en alta mar; su escenario es La Caleta). El cursor 1P (y 2P) se desliza por el mapa al cambiar de luchador. Abajo a la izquierda, el retrato grande del elegido; las caras van en un bloque de dos filas de tres en el mar, bajo la isla, con ¡A LUCHAR! debajo; las opciones de modo, dificultad y escenario van en la esquina del mar. Se puede elegir tocando la cara o el barrio en el mapa.
+Al estilo de las recreativas: arriba el mapa de Cádiz con el barrio de cada luchador (Chapa en el Baluarte de la Candelaria, Ares en la playa de Santa María del Mar, Alba en La Caleta, Martín en el Teatro Falla, Selu en la Plaza de las Flores y Canijo fuera de Cádiz, en alta mar; su escenario es La Caleta). El cursor 1P (y 2P) se desliza por el mapa al cambiar de luchador. Abajo a la izquierda, el retrato grande del elegido; las caras van en un bloque de dos filas de tres en el mar, bajo la isla, con ¡A LUCHAR! debajo; las estadísticas del elegido van a la izquierda, encima de su retrato, y las opciones de modo, dificultad y escenario en la columna derecha. Se puede elegir tocando la cara o el barrio en el mapa.
 
 ## Modos
 
-- **1P Arcade:** eliges luchador y te enfrentas a los otros cinco en orden aleatorio, con pantalla de VS antes de cada combate. Si pierdes, CONTINUE repite el mismo rival; si ganas a todos, eres campeón: sin opción de repetir, sale unos segundos el gran cartel de ¡CAMPEÓN! con la foto del ganador en el centro, fuegos artificiales y confeti, y después pasan los créditos solos; al acabar vuelve a la portada. Enter o un toque adelanta los créditos. `?screen=result&final=1` abre esa pantalla (`&ch=N` la congela en el frame N).
+- **1P Arcade:** eliges luchador y te enfrentas a los otros cinco en orden aleatorio, con pantalla de VS antes de cada combate. Si pierdes, CONTINUE repite el mismo rival; si ganas a todos, eres campeón: sin opción de repetir, sale unos segundos el gran cartel de ¡CAMPEÓN! con la foto del ganador en el centro, fuegos artificiales y confeti, y después pasan los créditos solos; al acabar vuelve a la portada. Enter o un toque adelanta los créditos. `?screen=result&final=1&char=canijo` abre esa pantalla con ese luchador (`&ch=N` la congela en el frame N).
 - **2 jugadores:** cada uno elige su luchador (no puede repetirse) y combaten en el mismo teclado.
 
 ## Arrancar

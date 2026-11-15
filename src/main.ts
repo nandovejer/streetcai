@@ -433,7 +433,9 @@ async function boot() {
     newLadder(); goVersus();
     if (params.has('vst')) { vsT = Number(params.get('vst')); vsFrozen = true; }
   } else if (params.get('screen') === 'result') {
-    // Pruebas: ?screen=result[&final=1]
+    // Pruebas: ?screen=result[&final=1][&char=<luchador>]
+    const cp = params.get('char') as FighterId;
+    if (FIGHTER_IDS.includes(cp)) settings.char = cp;
     newLadder(); if (params.has('final')) stage = ladder.length - 1;
     match = new Match(FIGHTERS[settings.char], FIGHTERS[ladder[stage]]);
     match.matchWinner = 0; match.f[0].wins = 2;
