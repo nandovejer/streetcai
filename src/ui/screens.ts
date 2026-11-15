@@ -233,10 +233,30 @@ export function selectButtons(s: Settings): Button[] {
   DIFFICULTY_NAMES.forEach((n, i) => opt(n, 'diff:' + i, s.difficulty === i && !s.twoPlayers));
   y += 13;
   STAGE_CHOICES.forEach((st) => opt(st === 'random' ? 'AL AZAR' : 'BARRIO RIVAL', 'stage:' + st, s.stage === st));
-  // ¡A LUCHAR!: botón grande y casi cuadrado a la derecha de las caras, a la altura del bloque
+  // ¡A LUCHAR!: botón rectangular a la derecha de las caras, centrado en altura con el bloque
   const rows = Math.ceil(FIGHTER_IDS.length / CARD_COLS), gridH = rows * (CARD + CARD_GAP) - CARD_GAP;
-  b.push({ x: GRID_X + GRID_W + 14, y: GRID_Y + 4, w: 84, h: gridH - 8, label: '¡A\nLUCHAR!', action: 'fight', kind: 'btn', on: true });
+  b.push({ x: GRID_X + GRID_W + 12, y: GRID_Y + gridH / 2 - 18, w: 106, h: 34, label: '¡A LUCHAR!', action: 'fight', kind: 'btn', on: true });
   return b;
+}
+
+/** Botón ¡A LUCHAR!: marco dorado con relieve pixelado, cuerpo rojo, texto con el degradado del título y brillo que late. */
+function drawFightButton(r: Renderer, b: Button, touch: boolean) {
+  const c = r.ctx, glow = 0.5 + Math.sin(r.time * 0.1) * 0.5;
+  c.save(); c.shadowColor = '#ffb000'; c.shadowBlur = 6 + glow * 8;
+  c.fillStyle = '#000'; c.fillRect(b.x - 3, b.y - 3, b.w + 6, b.h + 6);
+  c.restore();
+  // marco dorado con luz arriba-izquierda y sombra abajo-derecha
+  c.fillStyle = '#ffe27a'; c.fillRect(b.x - 2, b.y - 2, b.w + 4, b.h + 4);
+  c.fillStyle = '#b07800'; c.fillRect(b.x, b.y + b.h, b.w + 2, 2); c.fillRect(b.x + b.w, b.y, 2, b.h + 2);
+  c.fillStyle = '#000'; c.fillRect(b.x, b.y, b.w, b.h);
+  const g = c.createLinearGradient(0, b.y + 1, 0, b.y + b.h - 1);
+  g.addColorStop(0, '#ff6a2a'); g.addColorStop(0.5, '#d01e0e'); g.addColorStop(1, '#6a0a04');
+  c.fillStyle = g; c.fillRect(b.x + 1, b.y + 1, b.w - 2, b.h - 2);
+  c.fillStyle = 'rgba(255,220,180,.55)'; c.fillRect(b.x + 3, b.y + 3, b.w - 6, 2);   // brillo superior
+  c.fillStyle = 'rgba(0,0,0,.35)'; c.fillRect(b.x + 3, b.y + b.h - 5, b.w - 6, 2);    // sombra inferior
+  // texto en una línea con el degradado del título
+  gradText(r, '¡A LUCHAR!', b.x + b.w / 2 + 1, b.y + b.h / 2, 9, '#fff6b0', '#ffb000', 'center');
+  r.text(touch ? 'TOCA AQUI' : 'PULSA ENTER', b.x + b.w / 2, b.y + b.h + 11, 5, Math.floor(r.time / 30) % 2 ? '#9ab0ff' : '#ffd800');
 }
 
 function drawButton(r: Renderer, b: Button, size = 8) {
@@ -366,7 +386,7 @@ export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
     if (p1) { drawCorners(r, b.x - 3, b.y - 3, b.w + 6, b.h + 6, blink ? '#fff' : COL_J1, 9); r.text(s.twoPlayers ? '1P' : 'TU', b.x + 9, b.y + 7, 6, COL_J1); }
     if (p2) { drawCorners(r, b.x - 1, b.y - 1, b.w + 2, b.h + 2, blink ? '#fff' : COL_J2, 7); r.text('2P', b.x + b.w - 9, b.y + 7, 6, COL_J2); }
   }
-  for (const b of bs) if (b.kind === 'btn') drawButton(r, b, 11);
+  for (const b of bs) if (b.kind === 'btn') drawFightButton(r, b, touch);
 }
 
 // ---- VS: presentación del combate ----
