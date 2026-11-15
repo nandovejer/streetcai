@@ -297,7 +297,9 @@ export class Renderer {
       c.fillStyle = i === 0 ? '#ffb400' : '#3cb8ff'; c.fillRect(px - 1, y - 7, 34, 34);
       this.drawPortrait(f.def.id, px, y - 6, 32, i === 1);
       this.text(f.def.name, i === 0 ? x0 : x0 + barW, y + barH + 20, 8, '#fff', i === 0 ? 'left' : 'right');
-      this.text(labels[i], i === 0 ? x0 + 62 : x0 + barW - 62, y + barH + 20, 6, i === 0 ? '#ffb400' : '#3cb8ff', i === 0 ? 'left' : 'right');
+      // etiqueta (TU / CPU / J1...) detrás del nombre, que en la fuente pixel mide 8 px por letra
+      const lx = Math.max(62, f.def.name.length * 8 + 6);
+      this.text(labels[i], i === 0 ? x0 + lx : x0 + barW - lx, y + barH + 20, 6, i === 0 ? '#ffb400' : '#3cb8ff', i === 0 ? 'left' : 'right');
       // victorias
       for (let k = 0; k < ROUNDS_TO_WIN; k++) {
         const wx = i === 0 ? inner - 100 - k * 12 : inner + 100 + k * 12;

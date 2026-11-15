@@ -7,8 +7,8 @@ Dos tipos de lámina:
   - 'dark':   fondo azul oscuro (láminas originales).
   - 'pure':   croma verde puro (~0,250,0) con verde derramado sobre el personaje
               (Alba, Martín): recorte estricto + despill de todo el cuerpo.
-  - 'ogre':   croma verde puro con un personaje que también es verde (Canijo: piel de ogro y
-              vestido verde). Solo se quita el verde saturado del fondo y el halo del borde; nada de
+  - 'strict': croma verde puro con un personaje que también lleva verde (Canijo: piel de ogro y
+              vestido verde; Bizcocho: lazos verdes en la solapa). Solo se quita el verde saturado del fondo y el halo del borde; nada de
               despill sobre el cuerpo, que lo volvería marrón.
 """
 import json, sys
@@ -23,7 +23,8 @@ SOURCES = {
     'alba': ('documentacion/fighter-alba.png', 'pure'),
     'martin': ('documentacion/fighter-martin-optimo.png', 'pure'),
     'selu': ('documentacion/fighter-selu.png', 'pure'),
-    'canijo': ('documentacion/fighter-canijo.png', 'ogre'),
+    'canijo': ('documentacion/fighter-canijo.png', 'strict'),
+    'bizcocho': ('documentacion/fighter-bizcocho.png', 'strict'),
 }
 
 # fila: (fuente, y0, y1, x0, x1, nframes, escala)
@@ -127,6 +128,23 @@ FIGHTERS = {
             'jumpkick': [0, 1, 2, 3, 3, 4],     # agachado, despegue, patada, patada, aterrizaje
         },
     },
+    # Bizcocho: misma distribución que Chapa (8 idle/walk), salvo el puñetazo, que trae 5 frames.
+    'bizcocho': {
+        'portrait': ('bizcocho', 13, 92, 233, 295),  # (x0, y0, x1, y1)
+        'rows': {
+            'idle':     ('bizcocho', 36, 180, 495, 1275, 8, 1.0),
+            'walk':     ('bizcocho', 222, 374, 495, 1290, 8, 1.0),
+            'punch':    ('bizcocho', 538, 670, 12, 585, 5, 1.13),
+            'kick':     ('bizcocho', 536, 670, 622, 1258, 6, 1.13),
+            'jump':     ('bizcocho', 678, 836, 18, 565, 6, 1.13),
+            'jumpkick': ('bizcocho', 698, 836, 628, 1268, 6, 1.13),
+            'hit':      ('bizcocho', 848, 976, 16, 594, 6, 1.13),
+            'ko':       ('bizcocho', 870, 978, 632, 1252, 5, 1.13),
+        },
+        'order': {
+            'punch': [0, 1, 2, 3, 3, 4],
+        },
+    },
 }
 
 _cache = {}
@@ -141,7 +159,7 @@ def green(reg, mode='chroma'):
     if mode == 'pure':
         # verde puro y también la sombra verde oscura que la lámina pinta bajo los pies
         return (g > 60) & (g > 1.6 * np.maximum(r, b) + 30)
-    if mode == 'ogre':
+    if mode == 'strict':
         # solo el verde croma saturado: la piel verde-oliva y el vestido tienen más rojo/azul
         return (g > 150) & (g > 2 * np.maximum(r, b) + 20)
     return (g > r + 30) & (g > b + 30)
@@ -170,7 +188,7 @@ def edge_despill(sub, mask):
 def cut_frames(reg, mode, n, tag):
     """Devuelve lista de (rgba, ancla_x) ordenada de izquierda a derecha."""
     r, g, b = reg[..., 0], reg[..., 1], reg[..., 2]
-    if mode in ('chroma', 'pure', 'ogre'):
+    if mode in ('chroma', 'pure', 'strict'):
         fg = ~green(reg, mode)
     else:
         fg = (reg.max(axis=2) > 44) | (b > 37)
@@ -184,7 +202,7 @@ def cut_frames(reg, mode, n, tag):
     out = []
     for bi in bodies:
         m = (lab == bi + 1) & fg
-        if mode in ('pure', 'ogre'):
+        if mode in ('pure', 'strict'):
             # quedarse con el cuerpo: fuera letras de los rótulos y chispas sueltas
             l2, k2 = ndi.label(m, structure=np.ones((3, 3)))
             if k2 > 1:
@@ -215,7 +233,7 @@ def cut_frames(reg, mode, n, tag):
         mm = m[y0:y1, x0:x1]
         if mode == 'pure':
             despill(sub, mm)
-        elif mode == 'ogre':
+        elif mode == 'strict':
             edge_despill(sub, mm)
         elif mode == 'chroma':
             edge = mm & ~ndi.binary_erosion(mm, iterations=2)
@@ -262,11 +280,11 @@ def extract(name, cfg, contact_dir=None):
     src, px0, py0, px1, py1 = cfg['portrait']
     im, mode = load(src)
     reg = im[py0:py1, px0:px1]
-    alpha = np.where(green(reg, mode), 0, 255).astype(np.uint8) if mode in ('chroma', 'pure', 'ogre') else np.full(reg.shape[:2], 255, np.uint8)
+    alpha = np.where(green(reg, mode), 0, 255).astype(np.uint8) if mode in ('chroma', 'pure', 'strict') else np.full(reg.shape[:2], 255, np.uint8)
     reg = reg.copy()
     if mode == 'pure':
         despill(reg, alpha > 0)
-    elif mode == 'ogre':
+    elif mode == 'strict':
         edge_despill(reg, alpha > 0)
     rgb = reg.astype(np.uint8); rgb[alpha == 0] = 0
     Image.fromarray(np.dstack([rgb, alpha]), 'RGBA').save(f'{out}/portrait.png')

@@ -2,7 +2,7 @@
 
 Juego de lucha arcade 2D en el navegador (escritorio y móvil), ambientado en Cádiz.
 
-- **Luchadores:** Chapa (El Guerrero), Ares (El Viajero), Alba (El Marinero), Martín (El Veterano), Selu (El Dúo) y Canijo (El Ogro).
+- **Luchadores:** Chapa (El Guerrero), Ares (El Viajero), Alba (El Marinero), Martín (El Veterano), Selu (El Dúo), Canijo (El Ogro) y Bizcocho (El Cantaor).
 - **Escenarios:** el barrio de cada luchador (Candelaria, Santa María, La Caleta y Teatro Falla) y la Plaza de las Flores. En la selección: "BARRIO RIVAL" (se lucha en el barrio del rival, como en las recreativas) o "AL AZAR" (cualquiera, incluida la Plaza).
 
 ## Créditos y agradecimientos
@@ -23,11 +23,11 @@ Puerta de Tierra de fondo. La primera vez se ve una intro de unos 3 s: la cámar
 
 ## Selección de luchador
 
-Al estilo de las recreativas: arriba el mapa de Cádiz con el barrio de cada luchador (Chapa en el Baluarte de la Candelaria, Ares en la playa de Santa María del Mar, Alba en La Caleta, Martín en el Teatro Falla, Selu en la Plaza de las Flores y Canijo fuera de Cádiz, en alta mar; su escenario es La Caleta). El cursor 1P (y 2P) se desliza por el mapa al cambiar de luchador. Abajo a la izquierda, el retrato grande del elegido; las caras van en un bloque de dos filas de tres en el mar, bajo la isla, con ¡A LUCHAR! debajo; las estadísticas del elegido van a la izquierda, encima de su retrato, y las opciones de modo, dificultad y escenario en la columna derecha. Se puede elegir tocando la cara o el barrio en el mapa.
+Al estilo de las recreativas: arriba el mapa de Cádiz con el barrio de cada luchador (Chapa en el Baluarte de la Candelaria, Ares en la playa de Santa María del Mar, Alba en La Caleta, Martín en el Teatro Falla, Selu en la Plaza de las Flores Canijo fuera de Cádiz, en alta mar, y Bizcocho en La Viña; los dos pelean en La Caleta). El cursor 1P (y 2P) se desliza por el mapa al cambiar de luchador. Abajo a la izquierda, el retrato grande del elegido; las caras van en un bloque de dos filas de tres en el mar, bajo la isla, con ¡A LUCHAR! debajo; las estadísticas del elegido van a la izquierda, encima de su retrato, y las opciones de modo, dificultad y escenario en la columna derecha. Se puede elegir tocando la cara o el barrio en el mapa.
 
 ## Modos
 
-- **1P Arcade:** eliges luchador y te enfrentas a los otros cinco en orden aleatorio, con pantalla de VS antes de cada combate. Si pierdes, CONTINUE repite el mismo rival; si ganas a todos, eres campeón: sin opción de repetir, sale unos segundos el gran cartel de ¡CAMPEÓN! con la foto del ganador en el centro, fuegos artificiales y confeti, y después pasan los créditos solos; al acabar vuelve a la portada. Enter o un toque adelanta los créditos. `?screen=result&final=1&char=canijo` abre esa pantalla con ese luchador (`&ch=N` la congela en el frame N).
+- **1P Arcade:** eliges luchador y te enfrentas a todos los demás en orden aleatorio, con pantalla de VS antes de cada combate. Si pierdes, CONTINUE repite el mismo rival; si ganas a todos, eres campeón: sin opción de repetir, sale unos segundos el gran cartel de ¡CAMPEÓN! con la foto del ganador en el centro, fuegos artificiales y confeti, y después pasan los créditos solos; al acabar vuelve a la portada. Enter o un toque adelanta los créditos. `?screen=result&final=1&char=canijo` abre esa pantalla con ese luchador (`&ch=N` la congela en el frame N).
 - **2 jugadores:** cada uno elige su luchador (no puede repetirse) y combaten en el mismo teclado.
 
 ## Arrancar
@@ -114,7 +114,7 @@ Añadir un escenario: imagen en `documentacion/` + entrada en `STAGES` de `tools
 ## Decisiones respecto al plan técnico
 
 - **Canvas 2D propio en lugar de Phaser**: menos peso en móvil, simulación determinista a 60 Hz testeable en Node y cero dependencias de runtime. La arquitectura (escenas, luchador, combate, sistemas, UI) sigue la del plan.
-- **Sprites recortados de las láminas**: el plan pedía no usar las láminas como spritesheet, pero son el único arte disponible. Se recortan frame a frame con transparencia real, ancla en los pies y escala normalizada. Chapa sale entero de la lámina con croma verde (`fighter-chapa-chroma.png`). De la lámina croma de Ares solo se usan idle, walk y el retrato: en el resto de filas el personaje lleva otra ropa, así que esas siguen saliendo de la lámina original. Las láminas de Alba y Martín usan croma verde puro: se recortan con un modo más estricto que además quita la sombra pintada bajo los pies, los rótulos pegados y cualquier verde derramado sobre el personaje. Martín sale de `fighter-martin-optimo.png` (lámina regenerada con colores coherentes); en ella la fila de caminar está dibujada más grande que la de reposo y su escala lo compensa. Canijo es un ogro verde sobre croma verde: usa un modo propio (`ogre`) que solo quita el verde saturado del fondo y el halo del borde, sin tocar la piel ni el vestido.
+- **Sprites recortados de las láminas**: el plan pedía no usar las láminas como spritesheet, pero son el único arte disponible. Se recortan frame a frame con transparencia real, ancla en los pies y escala normalizada. Chapa sale entero de la lámina con croma verde (`fighter-chapa-chroma.png`). De la lámina croma de Ares solo se usan idle, walk y el retrato: en el resto de filas el personaje lleva otra ropa, así que esas siguen saliendo de la lámina original. Las láminas de Alba y Martín usan croma verde puro: se recortan con un modo más estricto que además quita la sombra pintada bajo los pies, los rótulos pegados y cualquier verde derramado sobre el personaje. Martín sale de `fighter-martin-optimo.png` (lámina regenerada con colores coherentes); en ella la fila de caminar está dibujada más grande que la de reposo y su escala lo compensa. Canijo (ogro verde) y Bizcocho (lazo verde en la solapa) usan el modo `strict`: solo se quita el verde croma saturado del fondo y el halo del borde. En los retratos de derrota, los huecos encerrados en la silueta se rellenan si su verde es más apagado que el del croma (el lazo) y se dejan transparentes si es croma (el fondo entre mechones de pelo).
 
 ## Recursos gráficos pendientes
 

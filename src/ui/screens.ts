@@ -190,13 +190,16 @@ export const HOMES: Record<FighterId, { x: number; y: number; place: string }> =
   selu: { x: 742, y: 478, place: 'PLAZA DE LAS FLORES' },
   // fuera de Cádiz: llega por mar (arriba a la izquierda, en mar abierto)
   canijo: { x: 128, y: 150, place: 'EN ALTA MAR' },
+  bizcocho: { x: 506, y: 548, place: 'LA VIÑA' },
 };
 /**
- * Caras en dos filas en el mar bajo la isla (entre La Caleta y Santa María). Al añadir luchadores, las filas
- * crecen hacia la derecha (hay mar libre hasta ~x 520): 3 columnas con 6, 4 con 8... hasta 6.
+ * Caras en dos filas en el mar bajo la isla, entre La Caleta y el rótulo de Santa María (x 176-370). Al añadir
+ * luchadores las filas ganan columnas (3 con 6, 4 con 7-8...) y las caras se encogen para caber.
  */
-const CARD = 50, CARD_GAP = 6, GRID_X = 184, GRID_Y = 212;
-const CARD_COLS = Math.min(6, Math.max(3, Math.ceil(FIGHTER_IDS.length / 2)));
+const CARD_GAP = 6, GRID_Y = 212, GRID_AREA_X = 176, GRID_AREA_W = 194;
+const CARD_COLS = Math.max(3, Math.ceil(FIGHTER_IDS.length / 2));
+const CARD = Math.min(50, Math.floor((GRID_AREA_W - (CARD_COLS - 1) * CARD_GAP) / CARD_COLS));
+const GRID_X = GRID_AREA_X + Math.floor((GRID_AREA_W - (CARD_COLS * CARD + (CARD_COLS - 1) * CARD_GAP)) / 2);
 const GRID_W = CARD_COLS * CARD + (CARD_COLS - 1) * CARD_GAP, GRID_CX = GRID_X + GRID_W / 2;
 const cardX = (i: number) => GRID_X + (i % CARD_COLS) * (CARD + CARD_GAP);
 const cardY = (i: number) => GRID_Y + Math.floor(i / CARD_COLS) * (CARD + CARD_GAP);
@@ -608,6 +611,11 @@ export const WIN_QUOTES: Record<FighterId, string[]> = {
     'TENGO MAS AÑOS EN EL FALLA QUE TU EN EL MUNDO, CHIQUILLO.',
     'QUITATE EL SOMBRERO ANTE LA EXPERIENCIA.',
     'EL CONCURSO SE GANA CON TABLAS, NO CON PRISAS.',
+  ],
+  bizcocho: [
+    'EN LA VIÑA SE PELEA A COMPAS. TU HAS IDO A CONTRATIEMPO.',
+    'ESTE QUEJIO NO TE LO QUITA NI EL LEVANTE, PICHA.',
+    'ARTE NO SE COMPRA, QUILLO. Y TU NO TRAIAS NI SUELTO.',
   ],
   canijo: [
     'VENGO DE UN PANTANO QUE NO SALE EN TU MAPA, QUILLO.',
