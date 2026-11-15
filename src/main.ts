@@ -46,7 +46,7 @@ async function boot() {
   // frases del locutor (MP3 generados con Piper TTS)
   // Solo las frases comunes se piden al arrancar; las de cada luchador (win_, super_) y los "X contra Y" (vs_)
   // se piden cuando se va a pelear, que son muchos archivos pequeños que casi nunca se usan todos.
-  const voiceIds = ['round1', 'round2', 'round3', 'round4', 'round5', 'fight', 'ko', 'time', 'perfect', 'draw', 'title', 'gameover', 'select', 'continue', 'champion', 'mystery'];
+  const voiceIds = ['round1', 'round2', 'round3', 'round4', 'round5', 'fight', 'ko', 'time', 'perfect', 'draw', 'title', 'gameover', 'select', 'continue', 'champion'];
   const input = new InputManager();
   const audio = new AudioManager();
   audio.loadVoices(voiceIds);

@@ -85,11 +85,10 @@ export type FighterId = (typeof FIGHTER_IDS)[number];
 /** Escenario del barrio de cada luchador (el suyo en el mapa de la selección). */
 export const HOME_STAGE: Record<FighterId, StageId> = {
   chapa: 'candelaria', ares: 'santamaria', alba: 'caleta', martin: 'falla', selu: 'plaza', canijo: 'caleta', bizcocho: 'rinconada',
-  // el secreto sale en un punto al azar del mapa, pero pelea siempre en la Zona Franca
   heredero: 'zonafranca',
 };
-/** Luchadores secretos: en la selección y el VS salen como "?" y no se sabe quién es hasta el combate. */
-export const SECRET: ReadonlySet<FighterId> = new Set<FighterId>(['heredero']);
+/** Luchadores secretos: en la selección y el VS salen como "?" y no se sabe quién es hasta el combate. Ahora ninguno; el mecanismo sigue disponible. */
+export const SECRET: ReadonlySet<FighterId> = new Set<FighterId>();
 
 export interface FighterDef {
   id: FighterId;
@@ -161,7 +160,7 @@ export const FIGHTERS: Record<FighterId, FighterDef> = {
     specialName: 'QUEJIO', proj: { speed: 5.2, damage: 11, core: '#ffe6ef', glow: '#ff3b6b', size: 15 },
     stats: { fuerza: 4, velocidad: 4, tecnica: 4, aguante: 4 }, moves: scaleMoves(0.95, 1.0),
   },
-  // Luchador secreto: copla afilá, ingenio y salero. Rápido y técnico, algo frágil.
+  // Copla afilá, ingenio y salero. Rápido y técnico, algo frágil.
   heredero: {
     id: 'heredero', name: 'HEREDERO', title: 'DEL LEVANTE', maxHp: 138, walk: 2.6, jumpV: 11.0, jumpVx: 3.0, power: 1.0,
     specialName: 'COPLA AFILA', proj: { speed: 5.8, damage: 10, core: '#e8fff4', glow: '#2fd08a', size: 14 },

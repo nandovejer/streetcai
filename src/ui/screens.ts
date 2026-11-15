@@ -192,11 +192,8 @@ export const HOMES: Record<FighterId, { x: number; y: number; place: string }> =
   canijo: { x: 128, y: 150, place: 'EN ALTA MAR' },
   // fuera de Cádiz: en el mar de abajo a la derecha, pasado el faro de Santa María
   bizcocho: { x: 1450, y: 930, place: 'EN ALTA MAR' },
-  // secreto: en un punto de Cádiz al azar en cada partida (se elige al cargar)
-  // (puntos en calles del casco antiguo, lejos de los rótulos y de los barrios de los demás)
-  heredero: { ...[
-    { x: 800, y: 400 }, { x: 1000, y: 470 }, { x: 1130, y: 560 }, { x: 760, y: 250 }, { x: 1080, y: 330 }, { x: 880, y: 520 },
-  ][Math.floor(Math.random() * 6)], place: '???' },
+  // entrada de Cádiz por tierra, tras Puertas de Tierra
+  heredero: { x: 1240, y: 748, place: 'ZONA FRANCA' },
 };
 /** Nombre y apodo como se muestran antes del combate (los secretos, ocultos). */
 export const shownName = (id: FighterId) => (SECRET.has(id) ? '???' : FIGHTERS[id].name);
@@ -678,7 +675,7 @@ export const WIN_QUOTES: Record<FighterId, string[]> = {
   heredero: [
     'EL LEVANTE SE HEREDA, QUILLO. Y TU NI LO HUELES.',
     'TE HE CANTADO LAS CUARENTA CON COPLA AFILA.',
-    'NO SABIAS QUIEN ERA, ¿VERDAD? AHORA YA NO SE TE OLVIDA.',
+    'DEL LEVANTE HEREDE EL SALERO. EL TUYO SE LO LLEVO EL VIENTO.',
   ],
   bizcocho: [
     'EN MI BARCO SE PELEA A COMPAS. TU HAS IDO A CONTRATIEMPO.',
