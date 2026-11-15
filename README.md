@@ -53,6 +53,7 @@ Se detecta como móvil o tablet si el puntero principal es el dedo (`pointer: co
 
 - **En horizontal:** pantalla completa, con el joystick y los botones superpuestos durante el combate. En los menús se toca directamente en la pantalla.
 - **En vertical:** la pantalla queda arriba y debajo un panel de recreativa, a mano del pulgar, que se ve en todas las pantallas. En combate es el mando (joystick + P, K, PF, KF, SP, BLQ). En los menús los botones cambian de rótulo: el joystick mueve el cursor y los botones hacen de OK, ATRAS, 1P/2P, BARRIO, NIVEL y SONIDO. En 2 jugadores, el primer OK confirma al J1 y pasa al J2. Sobre los botones hay una línea de ayuda según la pantalla: el resumen de lo elegido en la selección y la chuleta de controles en combate.
+- Estética de recreativa de los 90: palanca de bola roja sobre arandela negra con aro metálico (se ve el eje al inclinarla), pulsadores cóncavos de colores con aro y sombra de profundidad que se hunden al pulsarlos, y en vertical un panel negro con franjas, laterales rojos y tornillos.
 - La pantalla completa mantiene la orientación con la que se pulsó.
 
 ## Controles
