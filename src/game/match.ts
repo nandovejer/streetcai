@@ -33,12 +33,18 @@ export class Match {
   comboT: [number, number] = [0, 0];
   frame = 0;
 
+  /** Se llama al empezar cada round a partir del segundo (antes de colocar a los luchadores): permite
+   *  cambiarles el luchador (def), como hace el modo AL AZAR. */
+  onRound: ((m: Match) => void) | null = null;
+
   constructor(a: FighterDef, b: FighterDef) {
     this.f = [new Fighter(a, 0), new Fighter(b, 1)];
     this.startRound();
   }
 
+  private roundsStarted = 0;
   private startRound() {
+    if (this.roundsStarted++ > 0) this.onRound?.(this);
     this.f[0].reset(STAGE_W / 2 - 110, 1);
     this.f[1].reset(STAGE_W / 2 + 110, -1);
     this.projectiles = [];

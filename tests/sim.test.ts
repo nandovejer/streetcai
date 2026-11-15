@@ -42,5 +42,32 @@ for (let pi = 0; pi < PAIRS.length; pi++) {
   while (m.phase !== 'matchEnd' && frames++ < 60 * 400) { m.step([emptyInput(), ai.next(m.f[1], m.f[0], m.projectiles)]); m.events.length = 0; }
   check(m.matchWinner === 1, 'la IA no gana a un jugador pasivo');
 }
+// AL AZAR: el gancho onRound cambia de luchador en cada round (nunca el mismo que el rival) y la vida se repone
+{
+  const m = new Match(FIGHTERS.chapa, FIGHTERS.ares);
+  const ais = [new AI(2, rnd), new AI(2, rnd)];
+  const seen: string[] = [m.f[0].def.id];
+  let swaps = 0;
+  m.onRound = (mm) => {
+    const ok = FIGHTER_IDS.filter((id) => id !== mm.f[1].def.id && id !== mm.f[0].def.id);
+    mm.f[0].def = FIGHTERS[ok[Math.floor(rnd() * ok.length)]];
+    swaps++;
+  };
+  let frames = 0, lastRound = m.round, lastPhase = m.phase;
+  while (m.phase !== 'matchEnd' && frames++ < 60 * 60 * 12) {
+    m.step([ais[0].next(m.f[0], m.f[1], m.projectiles), ais[1].next(m.f[1], m.f[0], m.projectiles)]);
+    m.events.length = 0;
+    if (m.phase === 'intro' && lastPhase !== 'intro') {
+      seen.push(m.f[0].def.id);
+      check(m.f[0].hp === m.f[0].def.maxHp, 'AL AZAR: la vida no se repone con el luchador nuevo');
+      check(m.f[0].def.id !== m.f[1].def.id, 'AL AZAR: le tocó el mismo luchador que al rival');
+      check(seen[seen.length - 1] !== seen[seen.length - 2], 'AL AZAR: repitió luchador de un round al siguiente');
+    }
+    lastPhase = m.phase; lastRound = m.round;
+  }
+  check(m.phase === 'matchEnd', 'AL AZAR: el combate no terminó');
+  check(swaps >= 1 && swaps === seen.length - 1, `AL AZAR: cambios de luchador ${swaps}, rounds ${seen.length}`);
+  console.log(`AL AZAR: ${seen.join(' -> ')} (${swaps} cambios, round final ${lastRound})`);
+}
 if (fails) { console.error(`${fails} fallos`); throw new Error('test fallido'); }
 console.log('OK simulación');

@@ -8,11 +8,13 @@ export interface Settings {
   difficulty: Difficulty; twoPlayers: boolean;
   /** En 2 jugadores con ratón/táctil: a quién asigna el siguiente toque en un retrato. */
   pickTurn: 0 | 1;
+  /** Jugadores que han elegido AL AZAR (J1, J2): les toca un luchador distinto en cada round. */
+  rnd: [boolean, boolean];
   /** 'home' = el barrio del rival (como en las recreativas), 'random' = al azar; un StageId lo fuerza (pruebas). */
   stage: StageId | 'home' | 'random';
 }
 export const STAGE_CHOICES: ('home' | 'random')[] = ['home', 'random'];
-export interface Button { x: number; y: number; w: number; h: number; label: string; action: string; on?: boolean; kind?: 'card' | 'home' | 'opt' | 'btn' }
+export interface Button { x: number; y: number; w: number; h: number; label: string; action: string; on?: boolean; kind?: 'card' | 'rand' | 'home' | 'opt' | 'btn' }
 
 const COL_J1 = '#ffd800', COL_J2 = '#3cb8ff';
 
@@ -195,9 +197,11 @@ export const HOMES: Record<FighterId, { x: number; y: number; place: string }> =
   // entrada de Cádiz por tierra, tras Puertas de Tierra
   heredero: { x: 1240, y: 748, place: 'ZONA FRANCA' },
 };
-/** Nombre y apodo como se muestran antes del combate (los secretos, ocultos). */
-export const shownName = (id: FighterId) => (SECRET.has(id) ? '???' : FIGHTERS[id].name);
-const shownTitle = (id: FighterId) => (SECRET.has(id) ? 'LUCHADOR MISTERIOSO' : FIGHTERS[id].title);
+/** Nombre y apodo como se muestran antes del combate (los secretos, ocultos; AL AZAR, sin luchador fijo). */
+export const shownName = (id: FighterId | 'random') => (id === 'random' ? 'AL AZAR' : SECRET.has(id) ? '???' : FIGHTERS[id].name);
+const shownTitle = (id: FighterId | 'random') => (id === 'random' ? 'UNO DISTINTO CADA ROUND' : SECRET.has(id) ? 'LUCHADOR MISTERIOSO' : FIGHTERS[id].title);
+/** AL AZAR: luchador que se muestra en este instante (las caras van pasando; off desfasa al J2). */
+export const cycleId = (t: number, off = 0): FighterId => FIGHTER_IDS[(Math.floor(t / 9) + off) % FIGHTER_IDS.length];
 /**
  * Caras en dos filas en el mar bajo la isla, entre La Caleta y el rótulo de Santa María (x 176-370). Al añadir
  * luchadores las filas ganan columnas (3 con 6, 4 con 7-8...) y las caras se encogen para caber.
@@ -230,9 +234,10 @@ export function selectButtons(s: Settings): Button[] {
   DIFFICULTY_NAMES.forEach((n, i) => opt(n, 'diff:' + i, s.difficulty === i && !s.twoPlayers));
   y += 13;
   STAGE_CHOICES.forEach((st) => opt(st === 'random' ? 'AL AZAR' : 'BARRIO RIVAL', 'stage:' + st, s.stage === st));
-  // ¡A LUCHAR!: botón rectangular a la derecha de las caras, centrado en altura con el bloque
-  const rows = Math.ceil(FIGHTER_IDS.length / CARD_COLS), gridH = rows * (CARD + CARD_GAP) - CARD_GAP;
-  b.push({ x: GRID_X + GRID_W + 12, y: GRID_Y + gridH / 2 - 18, w: 106, h: 34, label: '¡A LUCHAR!', action: 'fight', kind: 'btn', on: true });
+  // a la derecha de las caras: la casilla AL AZAR a la altura de la primera fila y ¡A LUCHAR! en la segunda
+  const sideX = GRID_X + GRID_W + 12;
+  b.push({ x: sideX, y: GRID_Y, w: 106, h: CARD, label: '', action: 'char:random', kind: 'rand', on: s.rnd[0] || (s.twoPlayers && s.rnd[1]) });
+  b.push({ x: sideX, y: GRID_Y + CARD + CARD_GAP + 2, w: 106, h: CARD - 4, label: '¡A LUCHAR!', action: 'fight', kind: 'btn', on: true });
   return b;
 }
 
@@ -269,9 +274,9 @@ function drawButton(r: Renderer, b: Button, size = 8) {
   }
 }
 
-function drawStats(r: Renderer, id: FighterId, sx: number, y0: number, head: string, headColor: string) {
-  const c = r.ctx, d = FIGHTERS[id], secret = SECRET.has(id);
-  r.text(secret ? '???' : head, sx, y0, 7, headColor, 'left');
+function drawStats(r: Renderer, id: FighterId, sx: number, y0: number, head: string, headColor: string, random = false) {
+  const c = r.ctx, d = FIGHTERS[id], secret = SECRET.has(id) || random;
+  r.text(random ? 'AL AZAR' : secret ? '???' : head, sx, y0, 7, headColor, 'left');
   if (secret) {
     ['FUERZA', 'VELOC.', 'TECNICA', 'AGUANTE'].forEach((n, k) => { r.text(n, sx, y0 + 16 + k * 19, 6, '#fff', 'left'); r.text('? ? ? ? ?', sx, y0 + 26 + k * 19, 6, '#b040ff', 'left'); });
     r.text('ESPECIAL', sx, y0 + 96, 6, '#fff', 'left');
@@ -289,7 +294,7 @@ function drawStats(r: Renderer, id: FighterId, sx: number, y0: number, head: str
 }
 
 /** Retrato grande sin marco, apoyado en el borde inferior (como en la selección de las recreativas). */
-function drawBigPortrait(r: Renderer, id: FighterId, side: 0 | 1, label: string, col: string) {
+function drawBigPortrait(r: Renderer, id: FighterId, side: 0 | 1, label: string, col: string, random = false) {
   const c = r.ctx, img = r.assets.portrait[id];
   const h = 132, w = img ? (img.width * h) / img.height : 140;
   if (SECRET.has(id)) r.drawSilhouette(id, side === 0 ? -4 : VW + 4 - w, VH - h, w, h, side === 1);
@@ -301,8 +306,8 @@ function drawBigPortrait(r: Renderer, id: FighterId, side: 0 | 1, label: string,
   }
   const tx = side === 0 ? 8 : VW - 8, al = side === 0 ? 'left' : 'right';
   r.text(label, tx, VH - h - 34, 9, col, al);
-  gradText(r, shownName(id), tx, VH - h - 18, 15, '#ffd060', '#ff5a00', al);
-  r.text(HOMES[id].place, tx, VH - h - 4, 6, '#fff', al);
+  gradText(r, random ? 'AL AZAR' : shownName(id), tx, VH - h - 18, 15, '#ffd060', '#ff5a00', al);
+  r.text(random ? '¿QUIEN TE TOCARA?' : HOMES[id].place, tx, VH - h - 4, 6, '#fff', al);
 }
 
 function drawCorners(r: Renderer, x: number, y: number, w: number, h: number, col: string, len = 5) {
@@ -327,8 +332,10 @@ export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
   if (r.assets.map) c.drawImage(r.assets.map, MAP_X, MAP_Y, MAP_W, MAP_H);
   c.restore();
   const blink = Math.floor(t / 10) % 2 === 0;
-  const players: [FighterId, string, string][] = [[s.char, s.twoPlayers ? '1P' : 'TU', COL_J1]];
-  if (s.twoPlayers) players.push([s.char2, '2P', COL_J2]);
+  // luchador que se enseña de cada jugador (con AL AZAR, el que toca en este instante)
+  const shown = (i: 0 | 1): FighterId => (s.rnd[i] ? cycleId(t, i * 3) : i ? s.char2 : s.char);
+  const players: [FighterId, string, string][] = [[shown(0), s.twoPlayers ? '1P' : 'TU', COL_J1]];
+  if (s.twoPlayers) players.push([shown(1), '2P', COL_J2]);
 
   // barrios: punto en cada uno y cursores deslizándose por el mapa
   for (const id of FIGHTER_IDS) {
@@ -341,7 +348,7 @@ export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
   players.forEach(([id, label, col], i) => {
     const [tx, ty] = mapPt(HOMES[id].x, HOMES[id].y), mc = mapCursor[i];
     mc[0] += (tx - mc[0]) * 0.22; mc[1] += (ty - mc[1]) * 0.22;
-    const sz = 20 + (blink ? 2 : 0), off = s.twoPlayers && s.char === s.char2 ? (i ? 4 : -4) : 0;
+    const sz = 20 + (blink ? 2 : 0), off = s.twoPlayers && players[0][0] === players[1]?.[0] ? (i ? 4 : -4) : 0;
     drawCorners(r, mc[0] - sz / 2 + off, mc[1] - sz / 2, sz, sz, blink ? '#fff' : col);
     r.text(label, mc[0] + off, mc[1] - sz / 2 - 8 - (blink ? 1 : 0), 8, col);
   });
@@ -366,11 +373,11 @@ export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
   }
 
   // columna izquierda: estadísticas del J1, encima de su retrato grande
-  drawStats(r, s.char, 8, 34, FIGHTERS[s.char].title, COL_J1);
+  drawStats(r, shown(0), 8, 34, FIGHTERS[s.char].title, COL_J1, s.rnd[0]);
 
   // retratos grandes
-  drawBigPortrait(r, s.char, 0, s.twoPlayers ? '1P' : 'TU', COL_J1);
-  if (s.twoPlayers) drawBigPortrait(r, s.char2, 1, '2P', COL_J2);
+  drawBigPortrait(r, shown(0), 0, s.twoPlayers ? '1P' : 'TU', COL_J1, s.rnd[0]);
+  if (s.twoPlayers) drawBigPortrait(r, shown(1), 1, '2P', COL_J2, s.rnd[1]);
 
   // fila de caras
   const head = s.twoPlayers && touch ? `TOCA UN RETRATO PARA ELEGIR ${s.pickTurn ? '2P' : '1P'}` : 'ELIGE TU LUCHADOR';
@@ -378,20 +385,37 @@ export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
   for (const b of bs) {
     if (b.kind !== 'card') continue;
     const id = b.action.slice(5) as FighterId;
-    const p1 = s.char === id, p2 = s.twoPlayers && s.char2 === id;
+    const p1 = !s.rnd[0] && s.char === id, p2 = s.twoPlayers && !s.rnd[1] && s.char2 === id;
     c.fillStyle = '#000'; c.fillRect(b.x - 2, b.y - 2, b.w + 4, b.h + 4);
     if (SECRET.has(id)) r.drawSecret(b.x, b.y, b.w); else r.drawPortrait(id, b.x, b.y, b.w);
     if (!p1 && !p2) { c.fillStyle = 'rgba(0,0,30,0.45)'; c.fillRect(b.x, b.y, b.w, b.h); }
     if (p1) { drawCorners(r, b.x - 3, b.y - 3, b.w + 6, b.h + 6, blink ? '#fff' : COL_J1, 9); r.text(s.twoPlayers ? '1P' : 'TU', b.x + 9, b.y + 7, 6, COL_J1); }
     if (p2) { drawCorners(r, b.x - 1, b.y - 1, b.w + 2, b.h + 2, blink ? '#fff' : COL_J2, 7); r.text('2P', b.x + b.w - 9, b.y + 7, 6, COL_J2); }
   }
+  for (const b of bs) if (b.kind === 'rand') drawRandomTile(r, b, t, s.rnd[0], s.twoPlayers && s.rnd[1], s.twoPlayers, blink);
   for (const b of bs) if (b.kind === 'btn') drawFightButton(r, b, touch);
+}
+
+/** Casilla AL AZAR: las caras pasando en el cuadrado de la izquierda y el rótulo a la derecha. */
+function drawRandomTile(r: Renderer, b: Button, t: number, p1: boolean, p2: boolean, two: boolean, blink: boolean) {
+  const c = r.ctx, sq = b.h;
+  c.fillStyle = '#000'; c.fillRect(b.x - 2, b.y - 2, b.w + 4, b.h + 4);
+  r.drawPortrait(cycleId(t), b.x, b.y, sq);
+  const g = c.createLinearGradient(b.x + sq, b.y, b.x + b.w, b.y + b.h);
+  g.addColorStop(0, '#3a1460'); g.addColorStop(1, '#120830');
+  c.fillStyle = g; c.fillRect(b.x + sq, b.y, b.w - sq, b.h);
+  c.fillStyle = '#000'; c.fillRect(b.x + sq, b.y, 2, b.h);
+  gradText(r, 'AL', b.x + sq + (b.w - sq) / 2 + 1, b.y + b.h / 2 - 7, 9, '#fff6b0', '#ffb000', 'center');
+  gradText(r, 'AZAR', b.x + sq + (b.w - sq) / 2 + 1, b.y + b.h / 2 + 8, 9, '#fff6b0', '#ffb000', 'center');
+  if (!p1 && !p2) { c.fillStyle = 'rgba(0,0,30,0.35)'; c.fillRect(b.x, b.y, b.w, b.h); }
+  if (p1) { drawCorners(r, b.x - 3, b.y - 3, b.w + 6, b.h + 6, blink ? '#fff' : COL_J1, 9); r.text(two ? '1P' : 'TU', b.x + 9, b.y + 7, 6, COL_J1); }
+  if (p2) { drawCorners(r, b.x - 1, b.y - 1, b.w + 2, b.h + 2, blink ? '#fff' : COL_J2, 7); r.text('2P', b.x + b.w - 9, b.y + 7, 6, COL_J2); }
 }
 
 // ---- VS: presentación del combate ----
 export const VERSUS_FRAMES = 150;
 
-export function drawVersus(r: Renderer, left: FighterId, right: FighterId, t: number, sub: string, stage: StageId, help: string[] = []) {
+export function drawVersus(r: Renderer, left: FighterId | 'random', right: FighterId | 'random', t: number, sub: string, stage: StageId, help: string[] = []) {
   r.time++;
   r.begin();
   const c = r.ctx;
@@ -408,7 +432,8 @@ export function drawVersus(r: Renderer, left: FighterId, right: FighterId, t: nu
   for (const [id, x, flip, col] of [[left, lx, false, COL_J1], [right, rxp, true, COL_J2]] as const) {
     c.fillStyle = '#000'; c.fillRect(x - 4, y - 4, size + 8, size + 8);
     c.fillStyle = col; c.fillRect(x - 2, y - 2, size + 4, size + 4);
-    if (SECRET.has(id)) r.drawSecret(x, y, size); else r.drawPortrait(id, x, y, size, flip);
+    if (id === 'random') r.drawPortrait(cycleId(r.time, flip ? 3 : 0), x, y, size, flip); // AL AZAR: caras pasando
+    else if (SECRET.has(id)) r.drawSecret(x, y, size); else r.drawPortrait(id, x, y, size, flip);
   }
   if (t > 12) {
     r.text(shownName(left), 60 + size / 2, y + size + 22, 14, COL_J1);

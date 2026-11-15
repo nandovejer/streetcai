@@ -25,6 +25,10 @@ Puerta de Tierra de fondo. La primera vez se ve una intro de unos 3 s: la cámar
 
 Al estilo de las recreativas: arriba el mapa de Cádiz con el barrio de cada luchador (Chapa en el Baluarte de la Candelaria, Ares en la playa de Santa María del Mar, Alba en La Caleta, Martín en el Teatro Falla, Selu en la Plaza de las Flores y Canijo y Bizcocho fuera de Cádiz, en alta mar: Canijo arriba a la izquierda, con escenario La Caleta, y Bizcocho abajo a la derecha, con escenario San José de la Rinconada). El cursor 1P (y 2P) se desliza por el mapa al cambiar de luchador. Abajo a la izquierda, el retrato grande del elegido; las caras van en un bloque de dos filas en el mar, bajo la isla (ganan columnas al añadir luchadores), con un botón grande ¡A LUCHAR! a su derecha; las estadísticas del elegido van a la izquierda, encima de su retrato, y las opciones de modo, dificultad y escenario en la columna derecha. Se puede elegir tocando la cara o el barrio en el mapa.
 
+## Luchador AL AZAR
+
+Junto a las caras, encima de ¡A LUCHAR!, está la casilla AL AZAR: muestra las caras de todos pasando, y mientras está elegida el cursor del mapa salta de barrio en barrio y las estadísticas salen como "?". Con ella te toca un luchador al azar en cada round (nunca el mismo que el rival ni el del round anterior); la vida se repone con la del luchador nuevo y las victorias de round se mantienen. En el arcade, como no tienes luchador fijo, te enfrentas a los ocho. En 2 jugadores la pueden elegir uno o los dos; se llega con el cursor (A/D o flechas) o tocándola. El cambio lo hace el gancho `Match.onRound`.
+
 ## Luchadores secretos
 
 El juego conserva el mecanismo de luchador sorpresa (`SECRET` en `src/game/data.ts`): un luchador de ese conjunto sale como "?" en la selección y el VS, con silueta, estadísticas ocultas y sin que el locutor diga su nombre (`mystery.mp3`). Ahora el conjunto está vacío: todos se ven igual, incluido el Heredero del Levante, que está en la Zona Franca del mapa (tras Puertas de Tierra) y pelea en el escenario de la Zona Franca.

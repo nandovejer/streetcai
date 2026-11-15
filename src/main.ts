@@ -51,7 +51,7 @@ async function boot() {
   const audio = new AudioManager();
   audio.loadVoices(voiceIds);
   const fighterVoices = (...ids: FighterId[]) => audio.loadVoices(ids.flatMap((a) => [`win_${a}`, `super_${a}`]));
-  const settings: Settings = { char: 'chapa', char2: 'ares', difficulty: 1, twoPlayers: false, pickTurn: 0, stage: 'home' };
+  const settings: Settings = { char: 'chapa', char2: 'ares', difficulty: 1, twoPlayers: false, pickTurn: 0, stage: 'home', rnd: [false, false] };
   let fightStage: StageId = 'plaza';
   const pickStage = () => {
     fightStage = settings.stage === 'random' ? STAGE_IDS[Math.floor(Math.random() * STAGE_IDS.length)]
@@ -63,7 +63,8 @@ async function boot() {
   let vsT = 0;
   let vsFrozen = false, contFrozen = false;
   const newLadder = () => {
-    ladder = FIGHTER_IDS.filter((id) => id !== settings.char);
+    // con AL AZAR (el luchador cambia cada round) el arcade incluye a todos como rivales
+    ladder = FIGHTER_IDS.filter((id) => settings.rnd[0] || id !== settings.char);
     for (let i = ladder.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ladder[i], ladder[j]] = [ladder[j], ladder[i]]; }
     stage = 0;
   };
@@ -97,17 +98,26 @@ async function boot() {
     setScreen('versus');
     audio.play('start');
     // pide ya lo que falte (luchadores, escenario, caras de derrota y voces); el combate espera si no ha llegado
-    void assets.needFight([settings.char, rivalId()], fightStage);
-    fighterVoices(settings.char, rivalId());
-    // con un luchador secreto el locutor no dice su nombre
-    const vsId = SECRET.has(settings.char) || SECRET.has(rivalId()) ? 'mystery' : `vs_${settings.char}_${rivalId()}`;
+    void assets.needFight(fightIds(), fightStage);
+    fighterVoices(...fightIds());
+    // con un luchador secreto o AL AZAR el locutor no dice nombres
+    const vsId = anyRandom() || SECRET.has(settings.char) || SECRET.has(rivalId()) ? 'mystery' : `vs_${settings.char}_${rivalId()}`;
     audio.loadVoices([vsId]);
     audio.prime([vsId, 'round1', 'fight', 'ko', 'perfect', `win_${settings.char}`, `win_${rivalId()}`, `super_${settings.char}`, `super_${rivalId()}`]);
     audio.voice(vsId);
   };
-  const fightReady = () => assets.fightReady([settings.char, rivalId()], fightStage);
+  const fightReady = () => assets.fightReady(fightIds(), fightStage);
   const startFight = () => {
-    match = new Match(FIGHTERS[settings.char], FIGHTERS[rivalId()]);
+    // AL AZAR: un luchador al sortear el combate y otro distinto en cada round (nunca el mismo que el rival)
+    const r0 = settings.rnd[0], r1 = settings.twoPlayers && settings.rnd[1];
+    let a = r0 ? roll(rivalId()) : settings.char;
+    const b = r1 ? roll(a) : rivalId();
+    if (r0 && a === b) a = roll(b);
+    match = new Match(FIGHTERS[a], FIGHTERS[b]);
+    if (r0 || r1) match.onRound = (m) => {
+      if (r0) m.f[0].def = FIGHTERS[roll(m.f[1].def.id, m.f[0].def.id)];
+      if (r1) m.f[1].def = FIGHTERS[roll(m.f[0].def.id, m.f[1].def.id)];
+    };
     ai = settings.twoPlayers ? null : new AI(settings.difficulty);
     paused = false; endT = 0;
     r.resetFight();
@@ -115,7 +125,7 @@ async function boot() {
     setScreen('fight');
     // en el arcade, adelanta el siguiente rival mientras se pelea
     const next = !settings.twoPlayers ? ladder[stage + 1] : undefined;
-    if (next) { void assets.needFight([next], HOME_STAGE[next]); fighterVoices(next); audio.loadVoices([`vs_${settings.char}_${next}`]); }
+    if (next) { void assets.needFight([next], HOME_STAGE[next]); fighterVoices(next); if (!anyRandom()) audio.loadVoices([`vs_${settings.char}_${next}`]); }
   };
 
   // Créditos: rodillo; al terminar (o al pulsar) vuelve a la pantalla de la que se vino.
@@ -149,26 +159,43 @@ async function boot() {
     setScreen('title');
   };
 
-  /** Elegir luchador. En 2 jugadores no se permite el mismo para ambos: si coinciden, se intercambian. */
-  const pick = (id: FighterId, who: 0 | 1 = settings.twoPlayers ? settings.pickTurn : 0) => {
-    if (!settings.twoPlayers) { settings.char = id; return; }
-    if (who === 0) { if (id === settings.char2) settings.char2 = settings.char; settings.char = id; }
-    else { if (id === settings.char) settings.char = settings.char2; settings.char2 = id; }
-    settings.pickTurn = who === 0 ? 1 : 0;
+  /** Elegir luchador (o AL AZAR). En 2 jugadores no se permite el mismo luchador fijo para ambos: si coinciden,
+   *  se intercambian; AL AZAR sí pueden elegirlo los dos. */
+  const pick = (id: FighterId | 'random', who: 0 | 1 = settings.twoPlayers ? settings.pickTurn : 0) => {
+    if (id === 'random') settings.rnd[who] = true;
+    else {
+      settings.rnd[who] = false;
+      if (!settings.twoPlayers) settings.char = id;
+      else if (who === 0) { if (id === settings.char2 && !settings.rnd[1]) settings.char2 = settings.char; settings.char = id; }
+      else { if (id === settings.char && !settings.rnd[0]) settings.char = settings.char2; settings.char2 = id; }
+    }
+    if (settings.twoPlayers) settings.pickTurn = who === 0 ? 1 : 0;
   };
-  /** Mover el cursor de un jugador por la fila de retratos (salta el del otro jugador). */
+  /** Mover el cursor de un jugador por las caras y la casilla AL AZAR (salta el luchador fijo del otro jugador). */
   const moveCursor = (who: 0 | 1, dir: number) => {
-    const cur = who === 0 ? settings.char : settings.char2, other = who === 0 ? settings.char2 : settings.char;
-    let i = FIGHTER_IDS.indexOf(cur);
-    do i = (i + dir + FIGHTER_IDS.length) % FIGHTER_IDS.length; while (settings.twoPlayers && FIGHTER_IDS[i] === other);
-    if (who === 0) settings.char = FIGHTER_IDS[i]; else settings.char2 = FIGHTER_IDS[i];
+    const slots: (FighterId | 'random')[] = [...FIGHTER_IDS, 'random'];
+    const cur = settings.rnd[who] ? 'random' : who === 0 ? settings.char : settings.char2;
+    const other = settings.rnd[1 - who] ? 'random' : who === 0 ? settings.char2 : settings.char;
+    let i = slots.indexOf(cur);
+    do i = (i + dir + slots.length) % slots.length; while (settings.twoPlayers && slots[i] !== 'random' && slots[i] === other);
+    const id = slots[i];
+    if (id === 'random') settings.rnd[who] = true;
+    else { settings.rnd[who] = false; if (who === 0) settings.char = id; else settings.char2 = id; }
     audio.play('select');
   };
+  /** Un luchador al azar distinto de los indicados. */
+  const roll = (...not: FighterId[]): FighterId => {
+    const ok = FIGHTER_IDS.filter((id) => !not.includes(id));
+    return ok[Math.floor(Math.random() * ok.length)];
+  };
+  const anyRandom = () => settings.rnd[0] || (settings.twoPlayers && settings.rnd[1]);
+  /** Luchadores que hay que tener descargados para el próximo combate (con AL AZAR, todos). */
+  const fightIds = (): FighterId[] => (anyRandom() ? [...FIGHTER_IDS] : [settings.char, rivalId()]);
 
   const act = (a: string | null) => {
     if (!a) return;
     audio.init();
-    if (a.startsWith('char:')) { pick(a.slice(5) as FighterId); audio.play('select'); }
+    if (a.startsWith('char:')) { pick(a.slice(5) as FighterId | 'random'); audio.play('select'); }
     else if (a.startsWith('diff:')) { settings.difficulty = Number(a.slice(5)) as Difficulty; settings.twoPlayers = false; audio.play('select'); }
     else if (a.startsWith('stage:')) { settings.stage = a.slice(6) as Settings['stage']; audio.play('select'); }
     else if (a === 'mode:cpu') { settings.twoPlayers = false; audio.play('select'); }
@@ -285,8 +312,8 @@ async function boot() {
   const PANEL_HINT: Record<string, () => string> = {
     title: () => 'OK: EMPEZAR',
     select: () => (settings.twoPlayers
-      ? `JOYSTICK: ELIGE J${settings.pickTurn + 1} · OK: ${settings.pickTurn ? 'A LUCHAR' : 'CONFIRMAR'}\nJ1 ${shownName(settings.char)}  VS  J2 ${shownName(settings.char2)}`
-      : `JOYSTICK: ELEGIR · OK: A LUCHAR\n${shownName(settings.char)} · ${DIFFICULTY_NAMES[settings.difficulty]} · ${settings.stage === 'random' ? 'AL AZAR' : 'BARRIO RIVAL'}`),
+      ? `JOYSTICK: ELIGE J${settings.pickTurn + 1} · OK: ${settings.pickTurn ? 'A LUCHAR' : 'CONFIRMAR'}\nJ1 ${settings.rnd[0] ? 'AL AZAR' : shownName(settings.char)}  VS  J2 ${settings.rnd[1] ? 'AL AZAR' : shownName(settings.char2)}`
+      : `JOYSTICK: ELEGIR · OK: A LUCHAR\n${settings.rnd[0] ? 'AL AZAR' : shownName(settings.char)} · ${DIFFICULTY_NAMES[settings.difficulty]} · ${settings.stage === 'random' ? 'AL AZAR' : 'BARRIO RIVAL'}`),
     versus: () => 'OK: SALTAR',
     continue: () => 'OK: SEGUIR · ATRAS: ABANDONAR',
     result: () => 'OK: SEGUIR · ATRAS: MENU',
@@ -423,7 +450,7 @@ async function boot() {
         : ['WASD/FLECHAS MOVER - F/G FLOJOS - T/Y FUERTES - R BLOQUEO - H ESPECIAL', 'ATRAS = BLOQUEAR - DOBLE TOQUE = DASH - BARRA LLENA + ESPECIAL = SUPER - ESC PAUSA'];
       // si aún falta algo por descargar, en lugar de la ayuda sale CARGANDO...
       const waiting = vsT >= VERSUS_FRAMES && !fightReady();
-      drawVersus(r, settings.char, rivalId(), vsT, sub, fightStage, waiting ? [] : help);
+      drawVersus(r, settings.rnd[0] ? 'random' : settings.char, settings.twoPlayers && settings.rnd[1] ? 'random' : rivalId(), vsT, sub, fightStage, waiting ? [] : help);
       if (waiting) r.text('CARGANDO...', VW / 2, 300, 8, Math.floor(r.time / 20) % 2 ? '#fff' : '#ffd800');
     } else if (screen === 'result' && match) {
       const w = match.matchWinner, win = match.f[w].def.id, lose = match.f[1 - w].def.id;
@@ -513,7 +540,7 @@ async function boot() {
       else if (screen === 'versus' && !vsFrozen) {
         if (vsT < VERSUS_FRAMES) vsT++;
         else if (fightReady()) startFight();
-        else if (vsT++ % 120 === 0) void assets.needFight([settings.char, rivalId()], fightStage); // reintenta si falló
+        else if (vsT++ % 120 === 0) void assets.needFight(fightIds(), fightStage); // reintenta si falló
       }
     }
     // Se dibuja solo cuando la simulación ha avanzado: en pantallas de 120 Hz son la mitad de frames y las
