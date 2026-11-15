@@ -69,7 +69,7 @@ export const FIGHTER_IDS = ['chapa', 'ares', 'alba', 'martin', 'selu', 'canijo',
 export type FighterId = (typeof FIGHTER_IDS)[number];
 
 /** Escenario del barrio de cada luchador (el suyo en el mapa de la selección). */
-export const HOME_STAGE: Record<FighterId, StageId> = { chapa: 'candelaria', ares: 'santamaria', alba: 'caleta', martin: 'falla', selu: 'plaza', canijo: 'caleta', bizcocho: 'caleta' };
+export const HOME_STAGE: Record<FighterId, StageId> = { chapa: 'candelaria', ares: 'santamaria', alba: 'caleta', martin: 'falla', selu: 'plaza', canijo: 'caleta', bizcocho: 'santamaria' };
 
 export interface FighterDef {
   id: FighterId;
@@ -135,7 +135,7 @@ export const FIGHTERS: Record<FighterId, FighterDef> = {
     specialName: 'ERUCTO', proj: { speed: 4.0, damage: 13, core: '#efffc8', glow: '#6fbf2a', size: 18 },
     stats: { fuerza: 5, velocidad: 2, tecnica: 2, aguante: 5 }, moves: scaleMoves(1.22, 1.04),
   },
-  // Cantaor de La Viña: arte, carisma y compás. Completo, sin puntos débiles ni fuertes.
+  // Cantaor llegado por mar: arte, carisma y compás. Completo, sin puntos débiles ni fuertes.
   bizcocho: {
     id: 'bizcocho', name: 'BIZCOCHO', title: 'EL CANTAOR', maxHp: 142, walk: 2.5, jumpV: 10.8, jumpVx: 2.8, power: 1.02,
     specialName: 'QUEJIO', proj: { speed: 5.2, damage: 11, core: '#ffe6ef', glow: '#ff3b6b', size: 15 },

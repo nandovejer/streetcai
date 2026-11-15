@@ -23,7 +23,7 @@ Puerta de Tierra de fondo. La primera vez se ve una intro de unos 3 s: la cámar
 
 ## Selección de luchador
 
-Al estilo de las recreativas: arriba el mapa de Cádiz con el barrio de cada luchador (Chapa en el Baluarte de la Candelaria, Ares en la playa de Santa María del Mar, Alba en La Caleta, Martín en el Teatro Falla, Selu en la Plaza de las Flores Canijo fuera de Cádiz, en alta mar, y Bizcocho en La Viña; los dos pelean en La Caleta). El cursor 1P (y 2P) se desliza por el mapa al cambiar de luchador. Abajo a la izquierda, el retrato grande del elegido; las caras van en un bloque de dos filas de tres en el mar, bajo la isla, con ¡A LUCHAR! debajo; las estadísticas del elegido van a la izquierda, encima de su retrato, y las opciones de modo, dificultad y escenario en la columna derecha. Se puede elegir tocando la cara o el barrio en el mapa.
+Al estilo de las recreativas: arriba el mapa de Cádiz con el barrio de cada luchador (Chapa en el Baluarte de la Candelaria, Ares en la playa de Santa María del Mar, Alba en La Caleta, Martín en el Teatro Falla, Selu en la Plaza de las Flores y Canijo y Bizcocho fuera de Cádiz, en alta mar: Canijo arriba a la izquierda, con escenario La Caleta, y Bizcocho abajo a la derecha, con escenario Santa María). El cursor 1P (y 2P) se desliza por el mapa al cambiar de luchador. Abajo a la izquierda, el retrato grande del elegido; las caras van en un bloque de dos filas de tres en el mar, bajo la isla, con ¡A LUCHAR! debajo; las estadísticas del elegido van a la izquierda, encima de su retrato, y las opciones de modo, dificultad y escenario en la columna derecha. Se puede elegir tocando la cara o el barrio en el mapa.
 
 ## Modos
 
@@ -94,7 +94,8 @@ Licencia de la voz: corpus Sharvard (Aubanel, García Lecumberri, Cooke, Cutugno
 ## Estructura
 
 ```
-documentacion/            láminas originales y plan técnico
+assets/                   originales que usan los scripts (láminas, fondos, mapa, derrotados; WebP sin pérdida) y plan técnico
+documentacion/            carpeta de trabajo local, fuera del repo (fotos y referencias)
 tools/extract_sprites.py  recorta las láminas -> atlas transparente + JSON por luchador, y los fondos
 tools/extract_defeated.py retratos de derrota (pantalla de CONTINUE)
 tools/generate_voices.py  voces del locutor con Piper TTS (requiere piper-tts y ffmpeg)
@@ -107,9 +108,9 @@ src/ui/                   pantallas de menú y controles táctiles
 tests/                    simulación IA vs IA
 ```
 
-Añadir un luchador: lámina nueva + entrada en `tools/extract_sprites.py` y `tools/extract_defeated.py` + entrada en `FIGHTER_IDS`/`FIGHTERS` (`src/game/data.ts`). La selección, el título y el arcade se adaptan solos.
+Añadir un luchador: lámina nueva en `assets/` (WebP sin pérdida) + entrada en `tools/extract_sprites.py` y `tools/extract_defeated.py` + entrada en `FIGHTER_IDS`/`FIGHTERS` (`src/game/data.ts`). La selección, el título y el arcade se adaptan solos.
 
-Añadir un escenario: imagen en `documentacion/` + entrada en `STAGES` de `tools/extract_sprites.py` (con su recorte: los pies quedan ~60 px de imagen sobre el borde inferior) + entrada en `STAGE_IDS`/`STAGES` (`src/game/data.ts`) y, si es el barrio de alguien, en `HOME_STAGE`.
+Añadir un escenario: imagen en `assets/` (WebP sin pérdida) + entrada en `STAGES` de `tools/extract_sprites.py` (con su recorte: los pies quedan ~60 px de imagen sobre el borde inferior) + entrada en `STAGE_IDS`/`STAGES` (`src/game/data.ts`) y, si es el barrio de alguien, en `HOME_STAGE`.
 
 ## Decisiones respecto al plan técnico
 

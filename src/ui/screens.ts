@@ -190,7 +190,8 @@ export const HOMES: Record<FighterId, { x: number; y: number; place: string }> =
   selu: { x: 742, y: 478, place: 'PLAZA DE LAS FLORES' },
   // fuera de Cádiz: llega por mar (arriba a la izquierda, en mar abierto)
   canijo: { x: 128, y: 150, place: 'EN ALTA MAR' },
-  bizcocho: { x: 506, y: 548, place: 'LA VIÑA' },
+  // fuera de Cádiz: en el mar de abajo a la derecha, pasado el faro de Santa María
+  bizcocho: { x: 1450, y: 930, place: 'EN ALTA MAR' },
 };
 /**
  * Caras en dos filas en el mar bajo la isla, entre La Caleta y el rótulo de Santa María (x 176-370). Al añadir
@@ -613,7 +614,7 @@ export const WIN_QUOTES: Record<FighterId, string[]> = {
     'EL CONCURSO SE GANA CON TABLAS, NO CON PRISAS.',
   ],
   bizcocho: [
-    'EN LA VIÑA SE PELEA A COMPAS. TU HAS IDO A CONTRATIEMPO.',
+    'EN MI BARCO SE PELEA A COMPAS. TU HAS IDO A CONTRATIEMPO.',
     'ESTE QUEJIO NO TE LO QUITA NI EL LEVANTE, PICHA.',
     'ARTE NO SE COMPRA, QUILLO. Y TU NO TRAIAS NI SUELTO.',
   ],

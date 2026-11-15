@@ -9,7 +9,7 @@ import numpy as np, cv2
 from PIL import Image
 from scipy import ndimage as ndi
 
-SRC = 'documentacion/mapa-cadiz-interactivo.png'
+SRC = 'assets/mapa-cadiz-interactivo.webp'
 OUT = 'public/assets/ui/map-cadiz.webp'
 MARKER_BOX = (480, 600, 530, 640)  # y0, y1, x0, x1 del cursor pintado
 
@@ -29,6 +29,6 @@ out.save(OUT, 'WEBP', quality=90, method=6)
 print(OUT, out.size)
 
 # Portada: Puerta de Tierra recortada a 16:9 (se quita algo de cielo y de empedrado).
-title = Image.open('documentacion/bg-puertatierra.png').convert('RGB').crop((0, 60, 1536, 924))
+title = Image.open('assets/bg-puertatierra.webp').convert('RGB').crop((0, 60, 1536, 924))
 title.save('public/assets/ui/title-bg.webp', 'WEBP', quality=90, method=6)
 print('public/assets/ui/title-bg.webp', title.size)

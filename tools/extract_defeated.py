@@ -7,19 +7,21 @@ import numpy as np
 from scipy import ndimage as ndi
 
 SOURCES = {
-    'ares': 'documentacion/ares-derrotado.png',
-    'chapa': 'documentacion/chapa-derrotado.png',
-    'alba': 'documentacion/alba-derrotado.png',
-    'martin': 'documentacion/martin-derrotado.png',
-    'selu': 'documentacion/selu-derrotado.png',
-    'canijo': 'documentacion/canijo-derrotado.png',
-    'bizcocho': 'documentacion/bizcocho-derrotado.png',
+    'ares': 'assets/ares-derrotado.webp',
+    'chapa': 'assets/chapa-derrotado.webp',
+    'alba': 'assets/alba-derrotado.webp',
+    'martin': 'assets/martin-derrotado.webp',
+    'selu': 'assets/selu-derrotado.webp',
+    'canijo': 'assets/canijo-derrotado.webp',
+    'bizcocho': 'assets/bizcocho-derrotado.webp',
 }
 # Personajes con verde propio (Canijo es un ogro; Bizcocho lleva un lazo verde): solo se quita el verde
 # croma saturado, y lo que quede encerrado dentro de la silueta se rellena.
 STRICT = {'canijo', 'bizcocho'}
 # Con piel verde (Canijo) el borde solo pierde el verde muy saturado; al resto se le quita todo el verde del halo.
 GREEN_SKIN = {'canijo'}
+# Rellenar huecos de verde propio solo donde hace falta (el lazo de Bizcocho); en Canijo son huecos de la tiara.
+FILL_OWN_GREEN = {'bizcocho'}
 OUT_W = 420  # ancho final (px); se dibuja suavizado a ~210 px lógicos
 
 
@@ -31,7 +33,7 @@ def extract(fid, path):
         # huecos encerrados en la silueta: si su verde medio es el del croma (~3,219,3) son fondo entre
         # mechones; si es más apagado (~30,180,30) es verde del propio personaje (el lazo) y se queda
         holes, nh = ndi.label(ndi.binary_fill_holes(fg) & ~fg)
-        if nh:
+        if nh and fid in FILL_OWN_GREEN:
             mean_g = ndi.mean(g, holes, range(1, nh + 1))
             fg |= np.isin(holes, [i + 1 for i in range(nh) if mean_g[i] < 205])
     else:

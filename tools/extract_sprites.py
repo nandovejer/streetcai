@@ -1,4 +1,4 @@
-"""Extrae los frames de las láminas de documentacion/ a atlas transparentes + JSON.
+"""Extrae los frames de las láminas de assets/ a atlas transparentes + JSON.
 Uso: python tools/extract_sprites.py [contact_sheet_dir]
 Requiere: pillow, numpy, scipy.
 
@@ -17,14 +17,14 @@ import numpy as np
 from scipy import ndimage as ndi
 
 SOURCES = {
-    'ares_chroma': ('documentacion/fighter-ares-chroma.png', 'chroma'),
-    'chapa_chroma': ('documentacion/fighter-chapa-chroma.png', 'chroma'),
-    'ares_dark': ('documentacion/fighter-ares.png', 'dark'),
-    'alba': ('documentacion/fighter-alba.png', 'pure'),
-    'martin': ('documentacion/fighter-martin-optimo.png', 'pure'),
-    'selu': ('documentacion/fighter-selu.png', 'pure'),
-    'canijo': ('documentacion/fighter-canijo.png', 'strict'),
-    'bizcocho': ('documentacion/fighter-bizcocho.png', 'strict'),
+    'ares_chroma': ('assets/fighter-ares-chroma.webp', 'chroma'),
+    'chapa_chroma': ('assets/fighter-chapa-chroma.webp', 'chroma'),
+    'ares_dark': ('assets/fighter-ares.webp', 'dark'),
+    'alba': ('assets/fighter-alba.webp', 'pure'),
+    'martin': ('assets/fighter-martin-optimo.webp', 'pure'),
+    'selu': ('assets/fighter-selu.webp', 'pure'),
+    'canijo': ('assets/fighter-canijo.webp', 'strict'),
+    'bizcocho': ('assets/fighter-bizcocho.webp', 'strict'),
 }
 
 # fila: (fuente, y0, y1, x0, x1, nframes, escala)
@@ -310,12 +310,12 @@ if __name__ == '__main__':
     # pierde arena del primer plano para que la cúpula del balneario entre en pantalla.
     import os
     STAGES = {
-        'plaza': ('documentacion/bg-plaza-flores.png', (0, 0, 1536, 872)),
-        'caleta': ('documentacion/bg-caleta.png', (0, 40, 1535, 912)),
+        'plaza': ('assets/bg-plaza-flores.webp', (0, 0, 1536, 872)),
+        'caleta': ('assets/bg-caleta.webp', (0, 40, 1535, 912)),
         # Los pies quedan ~60 px (de imagen) sobre el borde inferior del recorte.
-        'candelaria': ('documentacion/bg-candelaria.png', (0, 0, 1672, 925)),
-        'falla': ('documentacion/bg-plazafalla.png', (0, 40, 1536, 912)),
-        'santamaria': ('documentacion/bg-santamaria.png', (0, 68, 1536, 940)),
+        'candelaria': ('assets/bg-candelaria.webp', (0, 0, 1672, 925)),
+        'falla': ('assets/bg-plazafalla.webp', (0, 40, 1536, 912)),
+        'santamaria': ('assets/bg-santamaria.webp', (0, 68, 1536, 940)),
     }
     for sid, (path, box) in STAGES.items():
         os.makedirs(f'public/assets/stages/{sid}', exist_ok=True)
