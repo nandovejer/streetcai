@@ -302,7 +302,8 @@ async function boot() {
     if (h !== lastHint) { panelHint.textContent = h; lastHint = h; }
   };
 
-  document.getElementById('btn-pause')!.addEventListener('click', () => act('pause'));
+  const btnPause = document.getElementById('btn-pause')!;
+  btnPause.addEventListener('click', () => act('pause'));
   document.getElementById('btn-credits')!.addEventListener('click', () => { audio.init(); titleIdle = 0; openStaff(); });
   const btnMute = document.getElementById('btn-mute')!;
   const syncMute = () => {
@@ -519,6 +520,7 @@ async function boot() {
     // animaciones de los menús (que cuentan frames dibujados) van a la misma velocidad que en 60 Hz.
     if (n > 0) draw();
     if (touch) syncHint();
+    btnPause.classList.toggle('on', paused); // en pausa el botón muestra el triángulo de seguir
     if (screen === 'select') { assets.ensureFighter(settings.char); if (settings.twoPlayers) assets.ensureFighter(settings.char2); }
     if (screen === 'select' || screen === 'title') for (const id of [settings.char, settings.char2]) assets.ensurePortrait(id);
     requestAnimationFrame(loop);

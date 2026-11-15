@@ -67,7 +67,7 @@ Se detecta como móvil o tablet si el puntero principal es el dedo (`pointer: co
 | Especial | H (o abajo, abajo-adelante, adelante + puño) | B | L | SP |
 | Súper | Especial con la barra SUPER llena | | | SP |
 | Dash | Doble toque adelante / atrás | | | Doble toque |
-| Pausa | Esc / P | | | botón II |
+| Pausa | Esc / P | | | botón de pausa |
 
 En la selección: A/D (o flechas en 1P) mueven el cursor del J1, las flechas el del J2 en modo 2 jugadores, arriba/abajo cambian la dificultad, `E` cambia el escenario y Enter empieza. Con ratón o táctil, en 2 jugadores cada toque en un retrato o barrio elige alternando J1 y J2. La ayuda de controles aparece en la pantalla de VS antes de cada combate.
 

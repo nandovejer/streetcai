@@ -27,6 +27,9 @@ body[data-screen="fight"] #btn-credits, body[data-screen="credits"] #btn-credits
 #btn-full.on .ic-exit { display: block; }
 #btn-full.hidden { display: none; }
 #btn-pause { display: none; }
+#btn-pause svg { width: 19px; height: 19px; display: block; margin: auto; fill: currentColor; }
+#btn-pause .ic-play, #btn-pause.on .ic-pause { display: none; }
+#btn-pause.on .ic-play { display: block; }
 body[data-screen="fight"] #btn-pause { display: block; }
 
 /* Controles táctiles */
