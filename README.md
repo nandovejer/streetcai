@@ -7,7 +7,7 @@ Juego de lucha arcade 2D en el navegador (escritorio y móvil), ambientado en C�
 
 ## Créditos y agradecimientos
 
-El botón de la estrella, junto al de pantalla completa, abre el rodillo de créditos al estilo de las recreativas: reparto, escenarios, voz, licencias y agradecimientos, con los luchadores desfilando abajo. También pasa solo unos segundos después de ganar el arcade. Enter, Esc o un toque lo cierran. El texto se edita en `src/ui/staffroll.ts`.
+El botón de la estrella, junto al de pantalla completa, abre el rodillo de créditos al estilo de las recreativas: reparto, escenarios, voz, licencias y agradecimientos, con los luchadores desfilando abajo. También pasa sola después de la pantalla de campeón del arcade. Enter, Esc o un toque lo cierran. El texto se edita en `src/ui/staffroll.ts`.
 
 ## CONTINUE
 
@@ -27,7 +27,7 @@ Al estilo de las recreativas: arriba el mapa de Cádiz con el barrio de cada luc
 
 ## Modos
 
-- **1P Arcade:** eliges luchador y te enfrentas a los otros cinco en orden aleatorio, con pantalla de VS antes de cada combate. Si pierdes, CONTINUE repite el mismo rival; si ganas a todos, eres campeón.
+- **1P Arcade:** eliges luchador y te enfrentas a los otros cinco en orden aleatorio, con pantalla de VS antes de cada combate. Si pierdes, CONTINUE repite el mismo rival; si ganas a todos, eres campeón: sin opción de repetir, sale unos segundos el gran cartel de ¡CAMPEÓN! con la foto del ganador en el centro, fuegos artificiales y confeti, y después pasan los créditos solos; al acabar vuelve a la portada. Enter o un toque adelanta los créditos. `?screen=result&final=1` abre esa pantalla (`&ch=N` la congela en el frame N).
 - **2 jugadores:** cada uno elige su luchador (no puede repetirse) y combaten en el mismo teclado.
 
 ## Arrancar

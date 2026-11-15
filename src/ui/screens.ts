@@ -378,15 +378,14 @@ export function drawVersus(r: Renderer, left: FighterId, right: FighterId, t: nu
   r.text(STAGES[stage].name + ' · CADIZ', VW / 2, 342, 7, '#fff');
 }
 
-/** final = ya ha ganado a todos los rivales del arcade. */
-export function resultButtons(final = false): Button[] {
+export function resultButtons(): Button[] {
   return [
-    { x: 150, y: 296, w: 160, h: 30, label: final ? 'OTRA VEZ' : 'SIGUIENTE', action: final ? 'arcade:again' : 'arcade:next', on: true },
+    { x: 150, y: 296, w: 160, h: 30, label: 'SIGUIENTE', action: 'arcade:next', on: true },
     { x: 330, y: 296, w: 160, h: 30, label: 'MENU', action: 'menu' },
   ];
 }
 
-export function drawResult(r: Renderer, winnerId: FighterId, loserId: FighterId, headline: string, score: string, final = false) {
+export function drawResult(r: Renderer, winnerId: FighterId, loserId: FighterId, headline: string, score: string) {
   r.time++;
   r.begin();
   r.drawStage(40, 0.75);
@@ -398,9 +397,136 @@ export function drawResult(r: Renderer, winnerId: FighterId, loserId: FighterId,
   r.drawSprite(winnerId, `idle_${Math.floor(r.time / 7) % 8}`, 130, 262, 1, 1.2);
   r.drawSprite(loserId, 'ko_4', 520, 262, -1, 1.2);
   r.text(`${d.name} GANA`, VW / 2, 236, 14, '#ffd800');
-  r.text(score, VW / 2, 262, final ? 9 : 12, final ? '#ffd800' : '#fff');
-  if (final) r.text('CAMPEON DE LA PLAZA DE LAS FLORES', VW / 2, 280, 7, '#fff');
-  for (const b of resultButtons(final)) drawButton(r, b, 10);
+  r.text(score, VW / 2, 262, 12, '#fff');
+  for (const b of resultButtons()) drawButton(r, b, 10);
+}
+
+// ---- CAMPEON: tras ganar a todos los rivales del arcade (sin botones; después pasan los créditos) ----
+/** Duración de la pantalla de campeón antes de los créditos (frames). */
+export const CHAMPION_FRAMES = 60 * 8;
+interface Spark { x: number; y: number; vx: number; vy: number; life: number; max: number; col: string; size: number; rocket?: boolean; tgt?: number; flash?: boolean }
+interface Bit { x: number; y: number; vx: number; vy: number; ph: number; col: string; w: number }
+const FW_COLS = ['#ffd800', '#ff5a3c', '#7fe0ff', '#ff7aa8', '#9dff6a', '#c58bff', '#ffffff'];
+let sparks: Spark[] = [], confetti: Bit[] = [], champLast = -1;
+
+function addConfetti(n: number, x?: number, y?: number) {
+  for (let i = 0; i < n; i++) {
+    const burst = x !== undefined, a = Math.random() * Math.PI * 2, sp = 1.5 + Math.random() * 5;
+    confetti.push({
+      x: burst ? x! : Math.random() * VW, y: burst ? y! : -10 - Math.random() * 200,
+      vx: burst ? Math.cos(a) * sp : (Math.random() - 0.5) * 0.6, vy: burst ? Math.sin(a) * sp - 3 : 0.6 + Math.random() * 0.9,
+      ph: Math.random() * 6, col: FW_COLS[(Math.random() * FW_COLS.length) | 0], w: 2 + ((Math.random() * 3) | 0),
+    });
+  }
+}
+function explode(x: number, y: number) {
+  const col = FW_COLS[(Math.random() * FW_COLS.length) | 0], col2 = FW_COLS[(Math.random() * FW_COLS.length) | 0];
+  const n = 60 + ((Math.random() * 30) | 0);
+  sparks.push({ x, y, vx: 0, vy: 0, life: 0, max: 12, col, size: 60, flash: true });
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + Math.random() * 0.1, sp = 1.8 + Math.random() * 2.8;
+    sparks.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0, max: 55 + Math.random() * 35, col: i % 3 ? col : col2, size: 3 });
+  }
+}
+
+/**
+ * Pantalla de campeón: gran cartel, foto del ganador en el centro con rayos de luz, el ganador y el último
+ * rival a los lados, fuegos artificiales y confeti. t = frames desde que empezó. Devuelve cuántos fuegos
+ * han estallado en este frame (para el sonido).
+ */
+export function drawChampion(r: Renderer, winnerId: FighterId, loserId: FighterId, rivals: number, t: number): number {
+  r.time++;
+  r.begin();
+  const c = r.ctx, d = FIGHTERS[winnerId];
+  if (t < champLast || champLast < 0) { sparks = []; confetti = []; addConfetti(90); }
+  const steps = Math.max(0, Math.min(5, t - champLast));
+  champLast = t;
+  r.drawStage(40, 0.75);
+  c.fillStyle = 'rgba(4,4,20,0.55)'; c.fillRect(0, 0, VW, VH);
+
+  // fuegos artificiales: cohetes que suben desde abajo y estallan
+  let booms = 0;
+  for (let k = 0; k < steps; k++) {
+    const tk = t - steps + k + 1;
+    // salva inicial cuando se estampa el cartel, y después un cohete cada ~1/3 s
+    if (tk === 14) { explode(110, 70); explode(VW - 110, 60); booms += 2; }
+    if (tk > 10 && tk % 18 === 0) {
+      const x = 50 + Math.random() * (VW - 100);
+      sparks.push({ x, y: VH + 4, vx: (Math.random() - 0.5) * 0.8, vy: -6.6 - Math.random() * 1.4, life: 0, max: 999, col: '#fff6c0', size: 3, rocket: true, tgt: 30 + Math.random() * 100 });
+    }
+    if (tk % 40 === 0) addConfetti(18);
+    for (const s of sparks) {
+      s.life++;
+      if (s.rocket) { s.x += s.vx; s.y += s.vy; s.vy += 0.07; if (s.y <= s.tgt! || s.vy >= -0.5) { s.life = s.max; explode(s.x, s.y); booms++; } }
+      else { s.x += s.vx; s.y += s.vy; s.vx *= 0.975; s.vy = s.vy * 0.975 + 0.045; }
+    }
+    sparks = sparks.filter((s) => s.life < s.max);
+    for (const p of confetti) {
+      p.ph += 0.15; p.vx *= 0.985; p.vy = Math.min(1.6, p.vy + 0.05); p.x += p.vx + Math.sin(p.ph * 0.5) * 0.35; p.y += p.vy;
+    }
+    confetti = confetti.filter((p) => p.y < VH + 10);
+  }
+  c.save(); c.globalCompositeOperation = 'lighter';
+  for (const s of sparks) {
+    const a = s.rocket ? 1 : Math.max(0, 1 - s.life / s.max);
+    if (s.flash) {
+      const g = c.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.size);
+      g.addColorStop(0, s.col); g.addColorStop(1, 'rgba(0,0,0,0)');
+      c.globalAlpha = a * 0.7; c.fillStyle = g; c.beginPath(); c.arc(s.x, s.y, s.size, 0, Math.PI * 2); c.fill();
+      continue;
+    }
+    c.fillStyle = s.col;
+    if (s.rocket) {
+      c.globalAlpha = 1; c.fillRect(Math.round(s.x) - 1, Math.round(s.y) - 1, 3, 3);
+      c.globalAlpha = 0.45; c.fillStyle = '#ffb040'; c.fillRect(Math.round(s.x), Math.round(s.y) + 2, 1, 9);
+      continue;
+    }
+    // estela: tres puntos hacia atrás que se apagan
+    for (let j = 2; j >= 0; j--) {
+      c.globalAlpha = a * (j ? 0.25 / j : 1);
+      const sz = j ? 2 : s.size;
+      c.fillRect(Math.round(s.x - s.vx * j * 2.2), Math.round(s.y - s.vy * j * 2.2), sz, sz);
+    }
+  }
+  c.restore();
+
+  // rayos de luz giratorios detrás de la foto
+  const cx = VW / 2, cy = 150, pop = Math.min(1, t / 18);
+  c.save(); c.translate(cx, cy); c.rotate(t * 0.006); c.globalAlpha = 0.22 * pop; c.fillStyle = '#ffe27a';
+  for (let i = 0; i < 16; i++) { c.beginPath(); c.moveTo(0, 0); c.arc(0, 0, 340, (i / 16) * Math.PI * 2, (i / 16) * Math.PI * 2 + 0.17); c.fill(); }
+  c.restore();
+
+  // ganador y último rival a los lados (como en la pantalla de resultado)
+  r.drawSprite(winnerId, `idle_${Math.floor(t / 7) % 8}`, 110, 300 - Math.abs(Math.sin(t * 0.09)) * 10, 1, 1.25);
+  r.drawSprite(loserId, 'ko_4', 540, 300, -1, 1.2);
+
+  // foto del ganador en el centro: entra con zoom y rebote
+  const size = 150 * (pop < 1 ? 0.6 + 0.4 * pop + Math.sin(pop * Math.PI) * 0.12 : 1 + Math.sin(t * 0.06) * 0.015);
+  c.save(); c.shadowColor = '#ffd800'; c.shadowBlur = 18;
+  c.fillStyle = '#000'; c.fillRect(cx - size / 2 - 5, cy - size / 2 - 5, size + 10, size + 10);
+  c.restore();
+  c.fillStyle = '#ffd800'; c.fillRect(cx - size / 2 - 3, cy - size / 2 - 3, size + 6, size + 6);
+  r.drawPortrait(winnerId, cx - size / 2, cy - size / 2, size);
+
+  // cartel grande: se estampa al principio y luego late
+  const s0 = t < 14 ? 3 - (2 * t) / 14 : 1 + Math.sin(t * 0.08) * 0.04;
+  c.save(); c.translate(cx, 38); c.scale(s0, s0); c.globalAlpha = Math.min(1, t / 8);
+  r.bigText('¡CAMPEON!', 0, 0, 36);
+  c.restore();
+  if (t >= 14 && t - steps < 14) addConfetti(90, cx, 40);
+
+  if (t > 20) {
+    r.text(d.name, cx, 246, 16, '#ffd800');
+    r.text('CAMPEON DE CADIZ', cx, 268, 9, '#fff');
+    r.text(`${rivals} DE ${rivals} RIVALES VENCIDOS`, cx, 284, 7, '#9ab0ff');
+  }
+
+  // confeti por delante de todo
+  for (const p of confetti) {
+    c.fillStyle = p.col;
+    c.fillRect(Math.round(p.x), Math.round(p.y), p.w, Math.sin(p.ph) > 0 ? p.w : 1);
+  }
+  return booms;
 }
 
 // ---- CONTINUE? (cuando pierde un jugador humano) ----

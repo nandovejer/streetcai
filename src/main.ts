@@ -9,7 +9,7 @@ import { DIFFICULTY_NAMES, Difficulty, FIGHTERS, FIGHTER_IDS, FighterId, HOME_ST
 import { Match } from './game/match';
 import { Input } from './game/fighter';
 import { Renderer } from './render/renderer';
-import { CONTINUE_FROM, CONTINUE_SECOND, STAGE_CHOICES, Settings, VERSUS_FRAMES, continueButtons, drawContinue, randomQuote, drawDemoOverlay, drawPause, drawResult, drawSelect, drawTitle, drawVersus, freezeTitleIntro, skipTitleIntro, titleIntroPlaying, hitButton, pauseButtons, resultButtons, selectButtons } from './ui/screens';
+import { CHAMPION_FRAMES, CONTINUE_FROM, CONTINUE_SECOND, drawChampion, STAGE_CHOICES, Settings, VERSUS_FRAMES, continueButtons, drawContinue, randomQuote, drawDemoOverlay, drawPause, drawResult, drawSelect, drawTitle, drawVersus, freezeTitleIntro, skipTitleIntro, titleIntroPlaying, hitButton, pauseButtons, resultButtons, selectButtons } from './ui/screens';
 import { isTouchDevice, setupTouch } from './ui/touch';
 import { STAFF_FRAMES, drawStaffRoll } from './ui/staffroll';
 
@@ -94,11 +94,13 @@ async function boot() {
   // Créditos: rodillo; al terminar (o al pulsar) vuelve a la pantalla de la que se vino.
   let staffT = 0, staffBack: Screen = 'title';
   /** Al ser campeón: unos segundos de celebración y después los créditos. */
-  let champT = 0;
-  const openStaff = () => {
+  let champT = 0, champFrozen = false;
+  /** Fin de la pantalla de campeón (por tiempo o al pulsar): créditos y después la portada. */
+  const skipChampion = () => { if (champT < 40) return; champT = 0; ladder = []; openStaff('title'); };
+  const openStaff = (back?: Screen) => {
     if (screen === 'credits' || screen === 'fight') return;
     if (demoMode) endDemo();
-    staffBack = screen === 'versus' ? 'select' : screen; staffT = 0;
+    staffBack = back ?? (screen === 'versus' ? 'select' : screen); staffT = 0;
     setScreen('credits');
   };
   const closeStaff = () => { if (screen === 'credits') setScreen(staffBack); };
@@ -147,7 +149,6 @@ async function boot() {
     }
     else if (a === 'fight') { ladder = []; goVersus(); }
     else if (a === 'arcade:next') { if (stage < ladder.length - 1) { stage++; goVersus(); } }
-    else if (a === 'arcade:again') { ladder = []; goVersus(); }
     else if (a === 'skip') { if (screen === 'versus' && vsT > 20) startFight(); }
     else if (a === 'menu') { paused = false; audio.play('select'); setScreen('select'); }
     else if (a === 'resume') paused = false;
@@ -166,7 +167,7 @@ async function boot() {
     if (demoMode) endDemo();
     else if (screen === 'title') { if (titleIntroPlaying()) skipTitleIntro(r); else act('title'); }
     else if (screen === 'select') act(hitButton(selectButtons(settings), x, y));
-    else if (screen === 'result') act(hitButton(resultButtons(stage >= ladder.length - 1), x, y));
+    else if (screen === 'result') { if (champT > 0) skipChampion(); else act(hitButton(resultButtons(), x, y)); }
     else if (screen === 'versus') act('skip');
     else if (screen === 'fight' && paused) act(hitButton(pauseButtons(), x, y));
     else if (screen === 'continue') act(overT >= 0 ? 'continue:no' : touch ? hitButton(continueButtons(), x, y) : 'continue:yes');
@@ -210,7 +211,8 @@ async function boot() {
       if (k === 'Escape') act('continue:no');
       else if (k === 'Enter' || k === 'Space') act(overT >= 0 ? 'continue:no' : 'continue:yes');
     } else if (screen === 'result') {
-      if (k === 'Enter' || k === 'Space') act(stage >= ladder.length - 1 ? 'arcade:again' : 'arcade:next');
+      if (champT > 0) { if (k === 'Enter' || k === 'Space' || k === 'Escape') skipChampion(); }
+      else if (k === 'Enter' || k === 'Space') act('arcade:next');
       else if (k === 'Escape') act('menu');
     }
   }
@@ -391,10 +393,11 @@ async function boot() {
       drawVersus(r, settings.char, rivalId(), vsT, sub, fightStage, help);
     } else if (screen === 'result' && match) {
       const w = match.matchWinner, win = match.f[w].def.id, lose = match.f[1 - w].def.id;
-      const final = stage >= ladder.length - 1;
-      const head = settings.twoPlayers ? `GANA J${w + 1}` : final ? '¡CAMPEON!' : '¡HAS GANADO!';
-      const score = final ? `${ladder.length} DE ${ladder.length} RIVALES VENCIDOS` : `${match.f[0].wins} - ${match.f[1].wins}   ·   RIVAL ${stage + 1} DE ${ladder.length}`;
-      drawResult(r, win, lose, head, score, final);
+      if (champT > 0) { if (drawChampion(r, win, lose, ladder.length, champT) > 0) audio.play('land'); }
+      else {
+        const head = settings.twoPlayers ? `GANA J${w + 1}` : '¡HAS GANADO!';
+        drawResult(r, win, lose, head, `${match.f[0].wins} - ${match.f[1].wins}   ·   RIVAL ${stage + 1} DE ${ladder.length}`);
+      }
     }
   };
 
@@ -435,6 +438,12 @@ async function boot() {
     match = new Match(FIGHTERS[settings.char], FIGHTERS[ladder[stage]]);
     match.matchWinner = 0; match.f[0].wins = 2;
     setScreen('result');
+    // ?final=1 abre la pantalla de campeón; &ch=N la congela en el frame N
+    if (params.has('final')) {
+      champT = Number(params.get('ch') || 1); champFrozen = params.has('ch');
+      // al congelar, simula los frames previos para que haya fuegos y confeti en pantalla
+      if (champFrozen) for (let i = 1; i < champT; i++) drawChampion(r, match.f[0].def.id, match.f[1].def.id, ladder.length, i);
+    }
   } else if (params.get('screen') === 'credits') {
     setScreen('title'); openStaff(); if (params.has('st')) staffT = Number(params.get('st'));
   } else if (params.get('screen') === 'demo') {
@@ -457,7 +466,7 @@ async function boot() {
       else if (screen === 'title' && !titleIntroPlaying() && ++titleIdle > DEMO_AFTER) startDemo();
       else if (screen === 'continue' && !contFrozen) stepContinue();
       else if (screen === 'credits' && ++staffT >= STAFF_FRAMES) closeStaff();
-      if (champT > 0 && screen === 'result' && ++champT > 60 * 5) { champT = 0; openStaff(); }
+      if (champT > 0 && screen === 'result' && !champFrozen && ++champT > CHAMPION_FRAMES) skipChampion();
       else if (champT > 0 && screen !== 'result') champT = 0;
       else if (screen === 'versus' && !vsFrozen && ++vsT >= VERSUS_FRAMES) startFight();
     }
