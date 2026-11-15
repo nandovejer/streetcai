@@ -297,7 +297,13 @@ function drawStats(r: Renderer, id: FighterId, sx: number, y0: number, head: str
 function drawBigPortrait(r: Renderer, id: FighterId, side: 0 | 1, label: string, col: string, random = false) {
   const c = r.ctx, img = r.assets.portrait[id];
   const h = 132, w = img ? (img.width * h) / img.height : 140;
-  if (SECRET.has(id)) r.drawSilhouette(id, side === 0 ? -4 : VW + 4 - w, VH - h, w, h, side === 1);
+  if (random) {
+    // AL AZAR: una interrogación grande donde iría el retrato, latiendo
+    const c2 = r.ctx, k = 1 + Math.sin(r.time * 0.12) * 0.05, cx = side === 0 ? 62 : VW - 62, cy = VH - h / 2 + 4;
+    c2.save(); c2.translate(cx, cy); c2.scale(k, k);
+    gradText(r, '?', 0, 0, 96, '#fff6b0', '#ff5a00', 'center');
+    c2.restore();
+  } else if (SECRET.has(id)) r.drawSilhouette(id, side === 0 ? -4 : VW + 4 - w, VH - h, w, h, side === 1);
   else if (img) {
     c.save(); c.imageSmoothingEnabled = true;
     if (side === 0) c.drawImage(img, -4, VH - h, w, h);
@@ -348,6 +354,7 @@ export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
   players.forEach(([id, label, col], i) => {
     const [tx, ty] = mapPt(HOMES[id].x, HOMES[id].y), mc = mapCursor[i];
     mc[0] += (tx - mc[0]) * 0.22; mc[1] += (ty - mc[1]) * 0.22;
+    if (s.rnd[i]) return; // AL AZAR: no señala ningún barrio
     const sz = 20 + (blink ? 2 : 0), off = s.twoPlayers && players[0][0] === players[1]?.[0] ? (i ? 4 : -4) : 0;
     drawCorners(r, mc[0] - sz / 2 + off, mc[1] - sz / 2, sz, sz, blink ? '#fff' : col);
     r.text(label, mc[0] + off, mc[1] - sz / 2 - 8 - (blink ? 1 : 0), 8, col);
@@ -400,7 +407,8 @@ export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
 function drawRandomTile(r: Renderer, b: Button, t: number, p1: boolean, p2: boolean, two: boolean, blink: boolean) {
   const c = r.ctx, sq = b.h;
   c.fillStyle = '#000'; c.fillRect(b.x - 2, b.y - 2, b.w + 4, b.h + 4);
-  r.drawPortrait(cycleId(t), b.x, b.y, sq);
+  // seleccionada: las caras van pasando; si no, quieta con la interrogación
+  if (p1 || p2) r.drawPortrait(cycleId(t), b.x, b.y, sq); else r.drawSecret(b.x, b.y, sq);
   const g = c.createLinearGradient(b.x + sq, b.y, b.x + b.w, b.y + b.h);
   g.addColorStop(0, '#3a1460'); g.addColorStop(1, '#120830');
   c.fillStyle = g; c.fillRect(b.x + sq, b.y, b.w - sq, b.h);
