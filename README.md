@@ -23,7 +23,7 @@ Puerta de Tierra de fondo. La primera vez se ve una intro de unos 3 s: la cámar
 
 ## Selección de luchador
 
-Al estilo de las recreativas: arriba el mapa de Cádiz con el barrio de cada luchador (Chapa en el Baluarte de la Candelaria, Ares en la playa de Santa María del Mar, Alba en La Caleta, Martín en el Teatro Falla, Selu en la Plaza de las Flores y Canijo fuera de Cádiz, en alta mar; su escenario es La Caleta). El cursor 1P (y 2P) se desliza por el mapa al cambiar de luchador. Abajo, el retrato grande del elegido y la fila de caras; las opciones de modo, dificultad y escenario van en la esquina del mar. Se puede elegir tocando la cara o el barrio en el mapa.
+Al estilo de las recreativas: arriba el mapa de Cádiz con el barrio de cada luchador (Chapa en el Baluarte de la Candelaria, Ares en la playa de Santa María del Mar, Alba en La Caleta, Martín en el Teatro Falla, Selu en la Plaza de las Flores y Canijo fuera de Cádiz, en alta mar; su escenario es La Caleta). El cursor 1P (y 2P) se desliza por el mapa al cambiar de luchador. Abajo a la izquierda, el retrato grande del elegido; las caras van en un bloque de dos filas de tres en el mar, bajo la isla, con ¡A LUCHAR! debajo; las opciones de modo, dificultad y escenario van en la esquina del mar. Se puede elegir tocando la cara o el barrio en el mapa.
 
 ## Modos
 

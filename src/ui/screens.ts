@@ -191,8 +191,11 @@ export const HOMES: Record<FighterId, { x: number; y: number; place: string }> =
   // fuera de Cádiz: llega por mar (arriba a la izquierda, en mar abierto)
   canijo: { x: 128, y: 150, place: 'EN ALTA MAR' },
 };
-const CARD = 56, CARD_GAP = 6, CARD_Y = 270;
-const cardX = (i: number) => (VW - (FIGHTER_IDS.length * CARD + (FIGHTER_IDS.length - 1) * CARD_GAP)) / 2 + i * (CARD + CARD_GAP);
+/** Caras en bloque de 3 por fila, en el mar bajo la isla (entre La Caleta y Santa María). */
+const CARD = 50, CARD_GAP = 6, CARD_COLS = 3, GRID_X = 184, GRID_Y = 212;
+const GRID_W = CARD_COLS * CARD + (CARD_COLS - 1) * CARD_GAP, GRID_CX = GRID_X + GRID_W / 2;
+const cardX = (i: number) => GRID_X + (i % CARD_COLS) * (CARD + CARD_GAP);
+const cardY = (i: number) => GRID_Y + Math.floor(i / CARD_COLS) * (CARD + CARD_GAP);
 const OPT_X = 6, OPT_W = 108;
 /** Posición animada de los cursores sobre el mapa (se deslizan de un barrio a otro). */
 const mapCursor: [number, number][] = [[0, 0], [0, 0]];
@@ -201,7 +204,7 @@ let mapCursorInit = false;
 export function selectButtons(s: Settings): Button[] {
   const b: Button[] = [];
   FIGHTER_IDS.forEach((id, i) => {
-    b.push({ x: cardX(i), y: CARD_Y, w: CARD, h: CARD, label: '', action: 'char:' + id, kind: 'card', on: s.char === id || (s.twoPlayers && s.char2 === id) });
+    b.push({ x: cardX(i), y: cardY(i), w: CARD, h: CARD, label: '', action: 'char:' + id, kind: 'card', on: s.char === id || (s.twoPlayers && s.char2 === id) });
     const [hx, hy] = mapPt(HOMES[id].x, HOMES[id].y);
     b.push({ x: hx - 12, y: hy - 12, w: 24, h: 24, label: '', action: 'char:' + id, kind: 'home' });
   });
@@ -213,7 +216,8 @@ export function selectButtons(s: Settings): Button[] {
   DIFFICULTY_NAMES.forEach((n, i) => opt(n, 'diff:' + i, s.difficulty === i && !s.twoPlayers));
   y += 13;
   STAGE_CHOICES.forEach((st) => opt(st === 'random' ? 'AL AZAR' : 'BARRIO RIVAL', 'stage:' + st, s.stage === st));
-  b.push({ x: VW / 2 - 70, y: 336, w: 140, h: 20, label: '¡A LUCHAR!', action: 'fight', kind: 'btn' });
+  const rows = Math.ceil(FIGHTER_IDS.length / CARD_COLS);
+  b.push({ x: GRID_CX - 70, y: GRID_Y + rows * (CARD + CARD_GAP) + 6, w: 140, h: 20, label: '¡A LUCHAR!', action: 'fight', kind: 'btn' });
   return b;
 }
 
@@ -324,7 +328,7 @@ export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
 
   // fila de caras
   const head = s.twoPlayers && touch ? `TOCA UN RETRATO PARA ELEGIR ${s.pickTurn ? '2P' : '1P'}` : 'ELIGE TU LUCHADOR';
-  r.text(head, VW / 2, 261, 6, s.twoPlayers && touch ? (s.pickTurn ? COL_J2 : COL_J1) : '#fff');
+  r.text(head, GRID_CX, GRID_Y - 8, 6, s.twoPlayers && touch ? (s.pickTurn ? COL_J2 : COL_J1) : '#fff', 'center', '#000');
   for (const b of bs) {
     if (b.kind !== 'card') continue;
     const id = b.action.slice(5) as FighterId;
