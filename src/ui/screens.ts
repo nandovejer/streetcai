@@ -1,5 +1,5 @@
 // Pantallas de menú dibujadas en el canvas: título, selección y resultado.
-import { DIFFICULTY_NAMES, Difficulty, FIGHTERS, FIGHTER_IDS, FighterId, HOME_STAGE, SECRET, STAGES, StageId, VH, VW } from '../game/data';
+import { DIFFICULTY_NAMES, Difficulty, FIGHTERS, FighterId, ROSTER, HOME_STAGE, SECRET, STAGES, StageId, VH, VW } from '../game/data';
 import { Renderer } from '../render/renderer';
 
 export interface Settings {
@@ -196,18 +196,20 @@ export const HOMES: Record<FighterId, { x: number; y: number; place: string }> =
   bizcocho: { x: 1450, y: 930, place: 'EN ALTA MAR' },
   // entrada de Cádiz por tierra, tras Puertas de Tierra
   heredero: { x: 1240, y: 748, place: 'ZONA FRANCA' },
+  // jefe final: su plaza está en La Viña (solo sale en el mapa con ?debug)
+  tiza: { x: 505, y: 615, place: 'LA VIÑA' },
 };
 /** Nombre y apodo como se muestran antes del combate (los secretos, ocultos; AL AZAR, sin luchador fijo). */
 export const shownName = (id: FighterId | 'random') => (id === 'random' ? 'AL AZAR' : SECRET.has(id) ? '???' : FIGHTERS[id].name);
 const shownTitle = (id: FighterId | 'random') => (id === 'random' ? 'UNO DISTINTO CADA ROUND' : SECRET.has(id) ? 'LUCHADOR MISTERIOSO' : FIGHTERS[id].title);
 /** AL AZAR: luchador que se muestra en este instante (las caras van pasando; off desfasa al J2). */
-export const cycleId = (t: number, off = 0): FighterId => FIGHTER_IDS[(Math.floor(t / 9) + off) % FIGHTER_IDS.length];
+export const cycleId = (t: number, off = 0): FighterId => ROSTER[(Math.floor(t / 9) + off) % ROSTER.length];
 /**
  * Caras en dos filas en el mar bajo la isla, entre La Caleta y el rótulo de Santa María (x 176-370). Al añadir
  * luchadores las filas ganan columnas (3 con 6, 4 con 7-8...) y las caras se encogen para caber.
  */
 const CARD_GAP = 6, GRID_Y = 238, GRID_AREA_X = 176, GRID_AREA_W = 194;
-const CARD_COLS = Math.max(3, Math.ceil(FIGHTER_IDS.length / 2));
+const CARD_COLS = Math.max(3, Math.ceil(ROSTER.length / 2));
 const CARD = Math.min(50, Math.floor((GRID_AREA_W - (CARD_COLS - 1) * CARD_GAP) / CARD_COLS));
 const GRID_X = GRID_AREA_X + Math.floor((GRID_AREA_W - (CARD_COLS * CARD + (CARD_COLS - 1) * CARD_GAP)) / 2);
 const GRID_W = CARD_COLS * CARD + (CARD_COLS - 1) * CARD_GAP, GRID_CX = GRID_X + GRID_W / 2;
@@ -221,7 +223,7 @@ let mapCursorInit = false;
 
 export function selectButtons(s: Settings): Button[] {
   const b: Button[] = [];
-  FIGHTER_IDS.forEach((id, i) => {
+  ROSTER.forEach((id, i) => {
     b.push({ x: cardX(i), y: cardY(i), w: CARD, h: CARD, label: '', action: 'char:' + id, kind: 'card', on: s.char === id || (s.twoPlayers && s.char2 === id) });
     const [hx, hy] = mapPt(HOMES[id].x, HOMES[id].y);
     b.push({ x: hx - 12, y: hy - 12, w: 24, h: 24, label: '', action: 'char:' + id, kind: 'home' });
@@ -344,7 +346,7 @@ export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
   if (s.twoPlayers) players.push([shown(1), '2P', COL_J2]);
 
   // barrios: punto en cada uno y cursores deslizándose por el mapa
-  for (const id of FIGHTER_IDS) {
+  for (const id of ROSTER) {
     const [hx, hy] = mapPt(HOMES[id].x, HOMES[id].y);
     if (SECRET.has(id)) { r.text('?', hx + 0.5, hy + 0.5, 9, Math.floor(t / 20) % 2 ? '#ffd800' : '#ff7aff', 'center', '#000'); continue; }
     c.fillStyle = '#000'; c.beginPath(); c.arc(hx, hy, 3.5, 0, Math.PI * 2); c.fill();
@@ -719,6 +721,11 @@ export const WIN_QUOTES: Record<FighterId, string[]> = {
     'VENGO DE UN PANTANO QUE NO SALE EN TU MAPA, QUILLO.',
     '¿TANTO NADAR HASTA CAI PARA ESTO? ME ESPERABA MAS.',
     'CANIJO ME LLAMAN. Y TU AHORA, ¿COMO TE LLAMAS? ¿SUELO?',
+  ],
+  tiza: [
+    'EN LA VIÑA SE ESCRIBE CON TIZA Y SE BORRA CON ARTE.',
+    'MAS BOMBIN Y MENOS PRISAS, CHIQUILLO: ESTAS ANTE EL MAESTRO.',
+    'TE HE APUNTADO EN LA PIZARRA... EN LA LISTA DE LOS QUE CAYERON.',
   ],
   selu: [
     'SOMOS DOS Y TU NI UNO ENTERO, QUILLO.',

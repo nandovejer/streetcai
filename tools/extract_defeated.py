@@ -15,10 +15,11 @@ SOURCES = {
     'canijo': 'assets/canijo-derrotado.webp',
     'bizcocho': 'assets/bizcocho-derrotado.webp',
     'heredero': 'assets/heredero-derrotado.webp',
+    'tiza': 'assets/tiodelatiza-derrotado.webp',
 }
 # Personajes con verde propio (Canijo es un ogro; Bizcocho lleva un lazo verde): solo se quita el verde
 # croma saturado, y lo que quede encerrado dentro de la silueta se rellena.
-STRICT = {'canijo', 'bizcocho', 'heredero'}
+STRICT = {'canijo', 'bizcocho', 'heredero', 'tiza'}
 # Con piel verde (Canijo) el borde solo pierde el verde muy saturado; al resto se le quita todo el verde del halo.
 GREEN_SKIN = {'canijo'}
 # Rellenar huecos de verde propio solo donde hace falta (el lazo de Bizcocho); en Canijo son huecos de la tiara.

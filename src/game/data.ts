@@ -65,7 +65,7 @@ const BASE_MOVES: Record<MoveId, MoveData> = {
 };
 
 /** Escenarios: imagen en public/assets/stages/<id>/bg.webp. */
-export const STAGE_IDS = ['plaza', 'caleta', 'candelaria', 'falla', 'santamaria', 'rinconada', 'zonafranca'] as const;
+export const STAGE_IDS = ['plaza', 'caleta', 'candelaria', 'falla', 'santamaria', 'rinconada', 'zonafranca', 'tiza'] as const;
 export type StageId = (typeof STAGE_IDS)[number];
 /** city: lo que sale tras el nombre en el VS ('' si no está en Cádiz). */
 export const STAGES: Record<StageId, { name: string; ambient: 'petals' | 'gulls'; city?: string }> = {
@@ -76,16 +76,23 @@ export const STAGES: Record<StageId, { name: string; ambient: 'petals' | 'gulls'
   santamaria: { name: 'BARRIO DE SANTA MARIA', ambient: 'petals' },
   rinconada: { name: 'SAN JOSE DE LA RINCONADA', ambient: 'petals', city: '' },
   zonafranca: { name: 'ZONA FRANCA', ambient: 'gulls' },
+  tiza: { name: 'PLAZA DEL TIO DE LA TIZA', ambient: 'petals' },
 };
 
-/** Luchadores disponibles, en el orden en que aparecen en la selección. */
-export const FIGHTER_IDS = ['chapa', 'ares', 'alba', 'martin', 'selu', 'canijo', 'bizcocho', 'heredero'] as const;
+/** Todos los luchadores (el último es el jefe final). */
+export const FIGHTER_IDS = ['chapa', 'ares', 'alba', 'martin', 'selu', 'canijo', 'bizcocho', 'heredero', 'tiza'] as const;
 export type FighterId = (typeof FIGHTER_IDS)[number];
+/** Jefe final del arcade: es el último rival y no se puede elegir en el mapa. */
+export const BOSS: FighterId = 'tiza';
+/** Con ?debug en la URL (o ?=debug) el mapa enseña y deja elegir a todos, jefe incluido. */
+export const DEBUG = typeof location !== 'undefined' && (() => { const q = new URLSearchParams(location.search); return q.has('debug') || [...q.values()].includes('debug'); })();
+/** Luchadores que se pueden elegir, en el orden en que aparecen en la selección. */
+export const ROSTER: readonly FighterId[] = DEBUG ? FIGHTER_IDS : FIGHTER_IDS.filter((id) => id !== BOSS);
 
 /** Escenario del barrio de cada luchador (el suyo en el mapa de la selección). */
 export const HOME_STAGE: Record<FighterId, StageId> = {
   chapa: 'candelaria', ares: 'santamaria', alba: 'caleta', martin: 'falla', selu: 'plaza', canijo: 'caleta', bizcocho: 'rinconada',
-  heredero: 'zonafranca',
+  heredero: 'zonafranca', tiza: 'tiza',
 };
 /** Luchadores secretos: en la selección y el VS salen como "?" y no se sabe quién es hasta el combate. Ahora ninguno; el mecanismo sigue disponible. */
 export const SECRET: ReadonlySet<FighterId> = new Set<FighterId>();
@@ -165,6 +172,12 @@ export const FIGHTERS: Record<FighterId, FighterDef> = {
     id: 'heredero', name: 'HEREDERO', title: 'DEL LEVANTE', maxHp: 138, walk: 2.6, jumpV: 11.0, jumpVx: 3.0, power: 1.0,
     specialName: 'COPLA AFILA', proj: { speed: 5.8, damage: 10, core: '#e8fff4', glow: '#2fd08a', size: 14 },
     stats: { fuerza: 3, velocidad: 4, tecnica: 4, aguante: 3 }, moves: scaleMoves(0.92, 1.0),
+  },
+  // Jefe final: el maestro de la chirigota con bombín. Empuje elegante, mucha presencia y golpes que duelen.
+  tiza: {
+    id: 'tiza', name: 'TIO DE LA TIZA', title: 'JEFE FINAL', maxHp: 162, walk: 2.0, jumpV: 10.2, jumpVx: 2.4, power: 1.08,
+    specialName: 'TIZAZO', proj: { speed: 4.8, damage: 12, core: '#ffffff', glow: '#b9c4ff', size: 18 },
+    stats: { fuerza: 5, velocidad: 2, tecnica: 4, aguante: 4 }, moves: scaleMoves(1.12, 1.06),
   },
 };
 

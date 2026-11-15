@@ -1,5 +1,6 @@
 """Genera las voces del locutor con Piper TTS (código abierto, sin conexión) a public/assets/voice/.
-Uso: python tools/generate_voices.py <carpeta_con_el_modelo> [voz]
+Uso: python tools/generate_voices.py <carpeta_con_el_modelo> [voz] [--all]
+(sin --all solo genera las que faltan, para no reescribir las que ya hay)
 Requiere: piper-tts, y ffmpeg en el PATH.
 
 Voz por defecto: es_ES-sharvard-medium, locutor masculino (español de España, CC-BY 3.0: hay que citar
@@ -21,6 +22,7 @@ FIGHTERS = {  # id: (nombre hablado, especial hablado)
     'canijo': ('Canijo', 'Eruto'),
     'bizcocho': ('Biscocho', 'Quejío'),
     'heredero': ('Heredero', 'Copla afilá'),
+    'tiza': ('el Tío de la Tisa', 'Tisaso'),
 }
 
 def phrases():
@@ -46,14 +48,17 @@ FILTER = ("afftfilt=real='hypot(re,im)*cos(0)':imag='hypot(re,im)*sin(0)':win_si
           'adelay=40,apad=pad_dur=0.12,loudnorm=I=-14:TP=-1.5:LRA=7')
 
 def main():
-    model_dir = sys.argv[1]
-    voice = sys.argv[2] if len(sys.argv) > 2 else 'es_ES-sharvard-medium'
+    args = [a for a in sys.argv[1:] if a != '--all']
+    model_dir = args[0]
+    voice = args[1] if len(args) > 1 else 'es_ES-sharvard-medium'
     out_dir = 'public/assets/voice'
     os.makedirs(out_dir, exist_ok=True)
     v = PiperVoice.load(os.path.join(model_dir, voice + '.onnx'))
     # locutor masculino (speaker 0), algo más rápido: el habla gaditana va ligera
     cfg = SynthesisConfig(speaker_id=0, length_scale=1.0, noise_scale=0.6, noise_w_scale=0.5)
     items = phrases()
+    if '--all' not in sys.argv:
+        items = {k: t for k, t in items.items() if not os.path.exists(os.path.join(out_dir, k + '.mp3'))}
     with tempfile.TemporaryDirectory() as tmp:
         for vid, text in items.items():
             raw = os.path.join(tmp, vid + '.wav')

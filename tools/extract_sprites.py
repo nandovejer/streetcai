@@ -26,6 +26,7 @@ SOURCES = {
     'canijo': ('assets/fighter-canijo.webp', 'strict'),
     'bizcocho': ('assets/fighter-bizcocho.webp', 'strict'),
     'heredero': ('assets/fighter-heredero.webp', 'strict'),
+    'tiza': ('assets/fighter-tiodelatiza.webp', 'pure'),  # traje negro sin verde: el despill no lo tiñe
 }
 
 # fila: (fuente, y0, y1, x0, x1, nframes, escala)
@@ -163,6 +164,24 @@ FIGHTERS = {
         'order': {
             'idle': [0, 1, 2, 3, 3, 4, 5, 6],
             'walk': [0, 1, 2, 3, 4, 5, 6, 6],
+            'punch': [0, 1, 2, 3, 3, 4],
+        },
+    },
+    # Tío de la Tiza (jefe final): 8 idle/walk y 5 puñetazo. Las filas de acción están dibujadas mucho más
+    # pequeñas que las de reposo; todo va algo más grande que el resto porque es el jefe.
+    'tiza': {
+        'portrait': ('tiza', 18, 110, 228, 363),  # (x0, y0, x1, y1)
+        'rows': {
+            'idle':     ('tiza', 44, 192, 528, 1356, 8, 1.15),
+            'walk':     ('tiza', 244, 400, 524, 1374, 8, 1.15),
+            'punch':    ('tiza', 600, 716, 12, 640, 5, 1.5),
+            'kick':     ('tiza', 600, 716, 690, 1380, 6, 1.5),
+            'jump':     ('tiza', 724, 849, 12, 640, 6, 1.5),
+            'jumpkick': ('tiza', 724, 849, 672, 1320, 6, 1.5),
+            'hit':      ('tiza', 878, 966, 12, 645, 6, 1.5),
+            'ko':       ('tiza', 878, 966, 690, 1380, 5, 1.5),
+        },
+        'order': {
             'punch': [0, 1, 2, 3, 3, 4],
         },
     },
@@ -341,6 +360,7 @@ if __name__ == '__main__':
         'santamaria': ('assets/bg-santamaria.webp', (0, 68, 1536, 940)),
         'rinconada': ('assets/bg-san-jose-de-la-rinconada.webp', (0, 0, 1672, 925)),
         'zonafranca': ('assets/bg-zona-franca-cadiz.webp', (0, 0, 1672, 925)),
+        'tiza': ('assets/bg-plaza-tio-de-la-tiza.webp', (0, 110, 1536, 982)),
     }
     for sid, (path, box) in STAGES.items():
         os.makedirs(f'public/assets/stages/{sid}', exist_ok=True)

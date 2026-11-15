@@ -5,7 +5,7 @@ import { loadAssets } from './engine/assets';
 import { AudioManager } from './engine/audio';
 import { InputManager } from './engine/input';
 import { AI } from './game/ai';
-import { DIFFICULTY_NAMES, Difficulty, FIGHTERS, SECRET, FIGHTER_IDS, FighterId, HOME_STAGE, STAGE_IDS, StageId, VH, VW } from './game/data';
+import { BOSS, DIFFICULTY_NAMES, Difficulty, FIGHTERS, ROSTER, SECRET, FIGHTER_IDS, FighterId, HOME_STAGE, STAGE_IDS, StageId, VH, VW } from './game/data';
 import { Match } from './game/match';
 import { Input } from './game/fighter';
 import { Renderer } from './render/renderer';
@@ -63,9 +63,11 @@ async function boot() {
   let vsT = 0;
   let vsFrozen = false, contFrozen = false;
   const newLadder = () => {
-    // con AL AZAR (el luchador cambia cada round) el arcade incluye a todos como rivales
-    ladder = FIGHTER_IDS.filter((id) => settings.rnd[0] || id !== settings.char);
+    // con AL AZAR (el luchador cambia cada round) el arcade incluye a todos como rivales;
+    // el jefe final va siempre el último (salvo que se juegue con él, en ?debug)
+    ladder = FIGHTER_IDS.filter((id) => id !== BOSS && (settings.rnd[0] || id !== settings.char));
     for (let i = ladder.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ladder[i], ladder[j]] = [ladder[j], ladder[i]]; }
+    if (settings.rnd[0] || settings.char !== BOSS) ladder.push(BOSS);
     stage = 0;
   };
   const rivalId = (): FighterId => (settings.twoPlayers ? settings.char2 : ladder[stage]);
@@ -118,7 +120,8 @@ async function boot() {
       if (r0) m.f[0].def = FIGHTERS[roll(m.f[1].def.id, m.f[0].def.id)];
       if (r1) m.f[1].def = FIGHTERS[roll(m.f[0].def.id, m.f[1].def.id)];
     };
-    ai = settings.twoPlayers ? null : new AI(settings.difficulty);
+    // el jefe final pelea un nivel por encima de la dificultad elegida
+    ai = settings.twoPlayers ? null : new AI(rivalId() === BOSS ? (Math.min(2, settings.difficulty + 1) as Difficulty) : settings.difficulty);
     paused = false; endT = 0;
     r.resetFight();
     audio.play('start');
@@ -173,7 +176,7 @@ async function boot() {
   };
   /** Mover el cursor de un jugador por las caras y la casilla AL AZAR (salta el luchador fijo del otro jugador). */
   const moveCursor = (who: 0 | 1, dir: number) => {
-    const slots: (FighterId | 'random')[] = [...FIGHTER_IDS, 'random'];
+    const slots: (FighterId | 'random')[] = [...ROSTER, 'random'];
     const cur = settings.rnd[who] ? 'random' : who === 0 ? settings.char : settings.char2;
     const other = settings.rnd[1 - who] ? 'random' : who === 0 ? settings.char2 : settings.char;
     let i = slots.indexOf(cur);
@@ -185,12 +188,12 @@ async function boot() {
   };
   /** Un luchador al azar distinto de los indicados. */
   const roll = (...not: FighterId[]): FighterId => {
-    const ok = FIGHTER_IDS.filter((id) => !not.includes(id));
+    const ok = ROSTER.filter((id) => !not.includes(id));
     return ok[Math.floor(Math.random() * ok.length)];
   };
   const anyRandom = () => settings.rnd[0] || (settings.twoPlayers && settings.rnd[1]);
   /** Luchadores que hay que tener descargados para el próximo combate (con AL AZAR, todos). */
-  const fightIds = (): FighterId[] => (anyRandom() ? [...FIGHTER_IDS] : [settings.char, rivalId()]);
+  const fightIds = (): FighterId[] => (anyRandom() ? [...new Set([...ROSTER, rivalId()])] : [settings.char, rivalId()]);
 
   const act = (a: string | null) => {
     if (!a) return;
@@ -202,7 +205,7 @@ async function boot() {
     else if (a === 'mode:2p') {
       settings.twoPlayers = true; audio.play('select');
       // no puede repetirse luchador: si coinciden, el J2 pasa al siguiente
-      if (settings.char2 === settings.char) settings.char2 = FIGHTER_IDS[(FIGHTER_IDS.indexOf(settings.char) + 1) % FIGHTER_IDS.length];
+      if (settings.char2 === settings.char) settings.char2 = ROSTER[(ROSTER.indexOf(settings.char) + 1) % ROSTER.length];
     }
     else if (a === 'fight') { ladder = []; goVersus(); }
     else if (a === 'arcade:next') { if (stage < ladder.length - 1) { stage++; goVersus(); } }
@@ -444,7 +447,7 @@ async function boot() {
       const w = match.matchWinner < 0 ? 1 : match.matchWinner;
       drawContinue(r, match.f[w].def.id, match.f[1 - w].def.id, quote, contT, overT, touch);
     } else if (screen === 'versus') {
-      const sub = settings.twoPlayers ? 'J1  VS  J2' : `RIVAL ${stage + 1} DE ${ladder.length}`;
+      const sub = settings.twoPlayers ? 'J1  VS  J2' : rivalId() === BOSS ? '¡JEFE FINAL!' : `RIVAL ${stage + 1} DE ${ladder.length}`;
       const help = touch ? ['JOYSTICK MOVER - P/K FLOJOS - PF/KF FUERTES - SP ESPECIAL', 'ATRAS = BLOQUEAR - DOBLE TOQUE = DASH - BARRA LLENA + SP = SUPER']
         : settings.twoPlayers ? ['1P: WASD + F/G FLOJOS - T/Y FUERTES - R BLOQUEO - H ESPECIAL', '2P: FLECHAS + J/K FLOJOS - U/I FUERTES - O BLOQUEO - L ESPECIAL']
         : ['WASD/FLECHAS MOVER - F/G FLOJOS - T/Y FUERTES - R BLOQUEO - H ESPECIAL', 'ATRAS = BLOQUEAR - DOBLE TOQUE = DASH - BARRA LLENA + ESPECIAL = SUPER - ESC PAUSA'];
@@ -489,9 +492,10 @@ async function boot() {
     startContinue();
     if (params.has('ct')) { contT = Number(params.get('ct')); contFrozen = true; }
   } else if (params.get('screen') === 'versus') {
-    // Pruebas: ?screen=versus[&vst=60] (vst congela la animación en ese frame)
+    // Pruebas: ?screen=versus[&vst=60][&final=1] (vst congela la animación en ese frame; final, contra el jefe)
     if (params.has('2p')) settings.twoPlayers = true;
-    newLadder(); goVersus();
+    newLadder(); if (params.has('final')) stage = ladder.length - 1;
+    goVersus();
     if (params.has('vst')) { vsT = Number(params.get('vst')); vsFrozen = true; }
   } else if (params.get('screen') === 'result') {
     // Pruebas: ?screen=result[&final=1][&char=<luchador>]

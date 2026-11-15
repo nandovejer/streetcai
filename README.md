@@ -2,8 +2,8 @@
 
 Juego de lucha arcade 2D en el navegador (escritorio y móvil), ambientado en Cádiz.
 
-- **Luchadores:** Chapa (El Guerrero), Ares (El Viajero), Alba (El Marinero), Martín (El Veterano), Selu (El Dúo), Canijo (El Ogro), Bizcocho (El Cantaor) y Heredero (Del Levante).
-- **Escenarios:** el barrio de cada luchador (Candelaria, Santa María, La Caleta y Teatro Falla), la Plaza de las Flores, San José de la Rinconada (Bizcocho) y la Zona Franca (Heredero). En la selección: "BARRIO RIVAL" (se lucha en el barrio del rival, como en las recreativas) o "AL AZAR" (cualquiera, incluida la Plaza).
+- **Luchadores:** Chapa (El Guerrero), Ares (El Viajero), Alba (El Marinero), Martín (El Veterano), Selu (El Dúo), Canijo (El Ogro), Bizcocho (El Cantaor) y Heredero (Del Levante). Jefe final: el Tío de la Tiza.
+- **Escenarios:** el barrio de cada luchador (Candelaria, Santa María, La Caleta y Teatro Falla), la Plaza de las Flores, San José de la Rinconada (Bizcocho) la Zona Franca (Heredero) y la Plaza del Tío de la Tiza (jefe final). En la selección: "BARRIO RIVAL" (se lucha en el barrio del rival, como en las recreativas) o "AL AZAR" (cualquiera, incluida la Plaza).
 
 ## Créditos y agradecimientos
 
@@ -28,6 +28,12 @@ Al estilo de las recreativas: arriba el mapa de Cádiz con el barrio de cada luc
 ## Luchador AL AZAR
 
 Junto a las caras, encima de ¡A LUCHAR!, está la casilla AL AZAR: muestra las caras de todos pasando, y mientras está elegida el cursor del mapa salta de barrio en barrio y las estadísticas salen como "?". Con ella te toca un luchador al azar en cada round (nunca el mismo que el rival ni el del round anterior); la vida se repone con la del luchador nuevo y las victorias de round se mantienen. En el arcade, como no tienes luchador fijo, te enfrentas a los ocho. En 2 jugadores la pueden elegir uno o los dos; se llega con el cursor (A/D o flechas) o tocándola. El cambio lo hace el gancho `Match.onRound`.
+
+## Jefe final: el Tío de la Tiza
+
+En el arcade (1P) es siempre el último rival, tras los otros ocho en orden aleatorio; el VS lo anuncia como "¡JEFE FINAL!" y se pelea en la Plaza del Tío de la Tiza (La Viña). Tiene más vida y pega más fuerte que el resto, y la CPU lo maneja un nivel por encima de la dificultad elegida (en DIFICIL se queda en DIFICIL). No se puede elegir en el mapa ni sale con AL AZAR, ni en 2 jugadores.
+
+**Modo depuración:** con `?debug` en la URL (también vale `?=debug`), por ejemplo http://localhost:5173/?debug, el mapa enseña y deja elegir a todos los luchadores, jefe incluido (su punto está en La Viña). Para ir directo al VS contra el jefe: `?screen=versus&final=1`.
 
 ## Luchadores secretos
 
