@@ -146,19 +146,19 @@ FIGHTERS = {
             'punch': [0, 1, 2, 3, 3, 4],
         },
     },
-    # Heredero del Levante: como Selu (7 idle/walk, 5 puñetazo). Las filas de acción están dibujadas
-    # bastante más pequeñas que las de reposo.
+    # Heredero del Levante: como Selu (7 idle/walk, 5 puñetazo). Las filas de acción están dibujadas más
+    # pequeñas que las de reposo. En la fuente de assets/ se ha borrado el rótulo HIT, que tocaba las cabezas.
     'heredero': {
-        'portrait': ('heredero', 15, 113, 243, 344),  # (x0, y0, x1, y1)
+        'portrait': ('heredero', 16, 93, 226, 321),  # (x0, y0, x1, y1)
         'rows': {
-            'idle':     ('heredero', 40, 206, 525, 1255, 7, 1.0),
-            'walk':     ('heredero', 262, 432, 505, 1290, 7, 1.0),
-            'punch':    ('heredero', 598, 736, 15, 650, 5, 1.2),
-            'kick':     ('heredero', 588, 736, 668, 1345, 6, 1.2),
-            'jump':     ('heredero', 742, 881, 12, 650, 6, 1.2),
-            'jumpkick': ('heredero', 744, 881, 668, 1350, 6, 1.2),
-            'hit':      ('heredero', 884, 1000, 12, 650, 6, 1.2),
-            'ko':       ('heredero', 900, 1000, 668, 1345, 5, 1.2),
+            'idle':     ('heredero', 36, 196, 482, 1165, 7, 1.0),
+            'walk':     ('heredero', 248, 410, 475, 1175, 7, 1.0),
+            'punch':    ('heredero', 590, 730, 10, 555, 5, 1.17),
+            'kick':     ('heredero', 570, 730, 592, 1198, 6, 1.17),
+            'jump':     ('heredero', 746, 912, 10, 578, 6, 1.17),
+            'jumpkick': ('heredero', 770, 912, 594, 1198, 6, 1.17),
+            'hit':      ('heredero', 918, 1062, 10, 580, 6, 1.17),
+            'ko':       ('heredero', 952, 1062, 602, 1208, 5, 1.17),
         },
         'order': {
             'idle': [0, 1, 2, 3, 3, 4, 5, 6],
