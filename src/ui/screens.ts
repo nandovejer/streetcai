@@ -205,7 +205,7 @@ const shownTitle = (id: FighterId) => (SECRET.has(id) ? 'LUCHADOR MISTERIOSO' : 
  * Caras en dos filas en el mar bajo la isla, entre La Caleta y el rótulo de Santa María (x 176-370). Al añadir
  * luchadores las filas ganan columnas (3 con 6, 4 con 7-8...) y las caras se encogen para caber.
  */
-const CARD_GAP = 6, GRID_Y = 212, GRID_AREA_X = 176, GRID_AREA_W = 194;
+const CARD_GAP = 6, GRID_Y = 238, GRID_AREA_X = 176, GRID_AREA_W = 194;
 const CARD_COLS = Math.max(3, Math.ceil(FIGHTER_IDS.length / 2));
 const CARD = Math.min(50, Math.floor((GRID_AREA_W - (CARD_COLS - 1) * CARD_GAP) / CARD_COLS));
 const GRID_X = GRID_AREA_X + Math.floor((GRID_AREA_W - (CARD_COLS * CARD + (CARD_COLS - 1) * CARD_GAP)) / 2);
@@ -233,8 +233,9 @@ export function selectButtons(s: Settings): Button[] {
   DIFFICULTY_NAMES.forEach((n, i) => opt(n, 'diff:' + i, s.difficulty === i && !s.twoPlayers));
   y += 13;
   STAGE_CHOICES.forEach((st) => opt(st === 'random' ? 'AL AZAR' : 'BARRIO RIVAL', 'stage:' + st, s.stage === st));
-  const rows = Math.ceil(FIGHTER_IDS.length / CARD_COLS);
-  b.push({ x: GRID_CX - 70, y: GRID_Y + rows * (CARD + CARD_GAP) + 6, w: 140, h: 20, label: '¡A LUCHAR!', action: 'fight', kind: 'btn' });
+  // ¡A LUCHAR!: botón grande y casi cuadrado a la derecha de las caras, a la altura del bloque
+  const rows = Math.ceil(FIGHTER_IDS.length / CARD_COLS), gridH = rows * (CARD + CARD_GAP) - CARD_GAP;
+  b.push({ x: GRID_X + GRID_W + 14, y: GRID_Y + 4, w: 84, h: gridH - 8, label: '¡A\nLUCHAR!', action: 'fight', kind: 'btn', on: true });
   return b;
 }
 
@@ -243,7 +244,10 @@ function drawButton(r: Renderer, b: Button, size = 8) {
   c.fillStyle = '#000'; c.fillRect(b.x - 2, b.y - 2, b.w + 4, b.h + 4);
   c.fillStyle = b.on ? '#ffd800' : '#8a8aa0'; c.fillRect(b.x - 1, b.y - 1, b.w + 2, b.h + 2);
   c.fillStyle = b.on ? '#7a1c00' : '#1b1b2e'; c.fillRect(b.x + 1, b.y + 1, b.w - 2, b.h - 2);
-  if (b.label) r.text(b.label, b.x + b.w / 2, b.y + b.h / 2 + 1, size, b.on ? '#ffe86b' : '#d8d8e8');
+  if (b.label) {
+    const lines = b.label.split('\n'), lh = size * 1.6;
+    lines.forEach((ln, i) => r.text(ln, b.x + b.w / 2, b.y + b.h / 2 + 1 + (i - (lines.length - 1) / 2) * lh, size, b.on ? '#ffe86b' : '#d8d8e8'));
+  }
 }
 
 function drawStats(r: Renderer, id: FighterId, sx: number, y0: number, head: string, headColor: string) {
@@ -362,7 +366,7 @@ export function drawSelect(r: Renderer, s: Settings, touch: boolean) {
     if (p1) { drawCorners(r, b.x - 3, b.y - 3, b.w + 6, b.h + 6, blink ? '#fff' : COL_J1, 9); r.text(s.twoPlayers ? '1P' : 'TU', b.x + 9, b.y + 7, 6, COL_J1); }
     if (p2) { drawCorners(r, b.x - 1, b.y - 1, b.w + 2, b.h + 2, blink ? '#fff' : COL_J2, 7); r.text('2P', b.x + b.w - 9, b.y + 7, 6, COL_J2); }
   }
-  for (const b of bs) if (b.kind === 'btn') drawButton(r, b, 9);
+  for (const b of bs) if (b.kind === 'btn') drawButton(r, b, 11);
 }
 
 // ---- VS: presentación del combate ----
